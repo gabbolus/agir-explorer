@@ -6,9 +6,9 @@
   <meta name="color-scheme" content="light dark">
   <title>Age Group Income Ratio Explorer</title>
   <meta name="description" content="Age Group Income Ratio and the decomposition of its growth, from LIS microdata. Guaitoli and Pancrazi.">
-  <link rel="stylesheet" href="assets/style.css?v=20261024k">
+  <link rel="stylesheet" href="assets/style.css?v=20261024l">
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
-  <script src="data/agir_data.js?v=20261024k"></script>
+  <script src="data/agir_data.js?v=20261024l"></script>
 </head>
 <body>
 <div class="viz-root">
@@ -145,14 +145,10 @@
       <select id="sort">
         <option value="grd">By total change</option>
         <option value="name">Alphabetical</option>
-        <option value="emp">By employment margin</option>
         <option value="wage">By wage margin</option>
-      </select>
-    </label>
-    <label>Endpoints
-      <select id="exact">
-        <option value="nearest" selected>Nearest available</option>
-        <option value="exact">Exact periods only</option>
+        <option value="emp">By employment margin</option>
+        <option value="trinc">By transfer income margin</option>
+        <option value="trshare">By transfer share margin</option>
       </select>
     </label>
   </section>
@@ -196,6 +192,6 @@
   <div id="noteTip" class="tip" role="tooltip" hidden></div>
   <footer class="foot">Data: Luxembourg Income Study (LIS) Database, (multiple countries; microdata runs completed on 22 October 2026). Luxembourg: LIS. All figures are aggregates computed by the authors.</footer>
 </div>
-<script src="assets/app.js?v=20261024k"></script>
+<script src="assets/app.js?v=20261024l"></script>
 </body>
 </html>

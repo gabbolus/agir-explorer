@@ -300,7 +300,7 @@
       return;
     }
     list.forEach(c => { const d = decomp(c, ptype, from, to); d ? res.push(d) : missing.push(c); });
-    const keyOf = { grd: "growth", emp: "employ", wage: "wage" }[state.sort];
+    const keyOf = { grd: "growth", wage: "wage", emp: "employ", trinc: "tr_inc", trshare: "tr_share" }[state.sort];
     res.sort((a, b) => state.sort === "name" ? b.country.localeCompare(a.country) : a[keyOf] - b[keyOf]);
     // group averages on top (excluding countries with caveats)
     const avg = g => {
@@ -429,7 +429,6 @@
   $("from").addEventListener("change", e => { state.from = +e.target.value; renderTiles(); renderDecomp(); announce(decompAnnounce); });
   $("to").addEventListener("change", e => { state.to = +e.target.value; renderTiles(); renderDecomp(); announce(decompAnnounce); });
   $("group").addEventListener("change", e => { state.group = e.target.value; renderDecomp(); announce(decompAnnounce); });
-  $("exact").addEventListener("change", e => { state.exact = e.target.value === "exact"; renderDecomp(); announce(decompAnnounce); });
   $("sort").addEventListener("change", e => { state.sort = e.target.value; renderDecomp(); announce(decompAnnounce); });
   ["c1", "c2", "c3"].forEach((id, i) => $(id).addEventListener("change", e => { state.cmp[i] = e.target.value; renderAgir(); announce("Comparison updated: " + (state.cmp.filter(Boolean).join(", ") || "no countries selected") + "."); }));
   $("toggleTable").addEventListener("click", () => { state.table = !state.table; renderTable(); });
