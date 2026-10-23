@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
   <title>Age Group Income Ratio Explorer</title>
   <meta name="description" content="Age Group Income Ratio and the decomposition of its growth, from LIS microdata. Guaitoli and Pancrazi.">
   <link rel="stylesheet" href="assets/style.css">
@@ -11,13 +12,45 @@
 </head>
 <body>
 <div class="viz-root">
+  <a class="skip" href="#controls">Skip to the filters and charts</a>
   <header class="page-head">
     <h1>Age Group Income Ratio Explorer</h1>
-    <p class="lede">The Age Group Income Ratio is the average disposable income of people aged 55&ndash;64 divided by that of people aged 25&ndash;34. Choose two periods to see how much of the change in the gap came from employment, wages and transfers.</p>
+    <p class="lede">How does the income of people aged 55&ndash;64 compare with that of people aged 25&ndash;34? Explore 37 countries from 2004 to 2024, and see which sources of income drove the change.</p>
     <p class="lede ref">Based on Guaitoli, G. and Pancrazi, R. (2026), &ldquo;Age-Income Gaps: The Role of Skill Congestion&rdquo;, <em>European Economic Review</em>, <a href="https://doi.org/10.1016/j.euroecorev.2026.105408" target="_blank" rel="noopener">doi:10.1016/j.euroecorev.2026.105408</a>. The dashboard extends the paper&rsquo;s data beyond 2018.</p>
   </header>
 
-  <section class="controls" aria-label="Filters">
+<main id="main">
+  <p id="status" class="sr-only" role="status" aria-live="polite"></p>
+
+  <section class="readbox" aria-labelledby="readTitle">
+    <h2 id="readTitle">How to read this dashboard</h2>
+    <div class="formula">
+      <span class="chip agir">AGIR</span>
+      <span class="eq" aria-hidden="true">=</span>
+      <span class="frac">
+        <span class="num">average income of people aged <span class="chip old">55&ndash;64</span></span>
+        <span class="den">average income of people aged <span class="chip young">25&ndash;34</span></span>
+      </span>
+      <span class="same">in the same year</span>
+    </div>
+    <p class="example"><strong>AGIR</strong> is the <strong>Age Group Income Ratio</strong>. An AGIR of <strong>1.20</strong> means that today&rsquo;s <span class="chip old">55&ndash;64</span> year-olds earn, on average, 20% more than today&rsquo;s <span class="chip young">25&ndash;34</span> year-olds.</p>
+    <div class="compare">
+      <div class="col yes">
+        <h3><span aria-hidden="true">&#10003;</span> What it shows</h3>
+        <p>A snapshot of how income is shared between two generations alive at the same time. A rising <span class="chip agir">AGIR</span> means income is becoming more concentrated among older people; a falling one, among younger people.</p>
+      </div>
+      <div class="col no">
+        <h3><span aria-hidden="true">&#10005;</span> What it does not show</h3>
+        <ul>
+          <li><strong>Not &ldquo;the young are getting poorer&rdquo;.</strong> The ratio can rise while the young&rsquo;s income also rises, if the old&rsquo;s rises faster.</li>
+          <li><strong>Not an age-income profile.</strong> Today&rsquo;s <span class="chip old">55&ndash;64</span> year-olds are not today&rsquo;s <span class="chip young">25&ndash;34</span> year-olds grown older, so the ratio does not say how a person&rsquo;s income grows with age.</li>
+        </ul>
+      </div>
+    </div>
+    <p class="scope"><strong>What is measured.</strong> All people in each age group, working or not. Income is labour income plus pensions and other transfers, net of income taxes. Capital income and wealth are not observed, so the gap is likely understated in high-income countries (a lower bound). Changes in surveys can also move the numbers; countries affected are marked &dagger;.</p>
+  </section>
+
+  <section class="controls" id="controls" tabindex="-1" aria-label="Filters">
     <label>Periods
       <select id="ptype">
         <option value="wave" selected>3-year waves</option>
@@ -49,27 +82,30 @@
     </label>
   </section>
 
-  <section class="tiles" id="tiles" aria-label="Headline numbers"></section>
+  <section class="tiles" id="tiles" role="group" aria-label="Headline numbers"></section>
 
   <section class="card">
     <div class="card-head">
-      <h2>Age Group Income Ratio over time</h2>
-      <div class="btns cmp" aria-label="Compare countries">
+      <h2 id="agirTitle">Age Group Income Ratio over time</h2>
+      <div class="btns cmp" role="group" aria-label="Compare countries">
         <span class="cmp-label">Compare</span>
-        <select id="c1" aria-label="First country"></select>
-        <select id="c2" aria-label="Second country"></select>
-        <select id="c3" aria-label="Third country"></select>
+        <select id="c1" aria-label="Compare country 1"></select>
+        <select id="c2" aria-label="Compare country 2"></select>
+        <select id="c3" aria-label="Compare country 3"></select>
+        <button id="toggleAgirTable" type="button" aria-expanded="false" aria-controls="agirTableWrap">Show table</button>
       </div>
     </div>
-    <p class="note" id="agirNote"></p>
-    <div id="agirChart" class="chart"></div>
+    <div class="note" id="agirNote"></div>
+    <div id="agirChart" class="chart" role="img" aria-labelledby="agirTitle" aria-describedby="agirSummary"></div>
+    <p id="agirSummary" class="sr-only"></p>
+    <div id="agirTableWrap" class="table-wrap" hidden></div>
   </section>
 
   <section class="card">
     <div class="card-head">
       <h2 id="decompTitle">What drove the change</h2>
       <div class="btns">
-        <button id="toggleTable" type="button">Show table</button>
+        <button id="toggleTable" type="button" aria-expanded="false" aria-controls="tableWrap">Show table</button>
         <button id="download" type="button">Download CSV</button>
       </div>
     </div>
@@ -81,7 +117,8 @@
       <li><strong>Transfer share:</strong> change in the share of people receiving transfers, valued at the initial average transfer.</li>
       <li><strong>Other income:</strong> change in income not captured by the four margins above, such as labour income of people not classified as employed.</li>
     </ul>
-    <div id="decompChart" class="chart"></div>
+    <div id="decompChart" class="chart" role="img" aria-labelledby="decompTitle" aria-describedby="decompSummary"></div>
+    <p id="decompSummary" class="sr-only"></p>
     <div id="tableWrap" class="table-wrap" hidden></div>
     <p class="note" id="missingNote"></p>
   </section>
@@ -102,6 +139,7 @@
     <p>Country-specific data issues relevant for interpretation. Countries with a note are marked with † in the charts.</p>
     <div id="countryNotes"></div>
   </details>
+</main>
   <footer class="foot">Data: Luxembourg Income Study (LIS) Database, (multiple countries; microdata runs completed on 22 October 2026). Luxembourg: LIS. All figures are aggregates computed by the authors.</footer>
 </div>
 <script src="assets/app.js"></script>

@@ -30,11 +30,11 @@
     6: "2019–21", 7: "2022–24", 8: "2025–27" };
   const OLD = 5, YOUNG = 2;
   const MARGINS = [
-    { key: "wage", label: "Wages", color: "--series-1" },
-    { key: "employ", label: "Employment", color: "--series-2" },
-    { key: "tr_inc", label: "Transfer income", color: "--series-3" },
-    { key: "tr_share", label: "Transfer share", color: "--series-4" },
-    { key: "other", label: "Other income", color: "--series-5" }
+    { key: "wage", label: "Wages", color: "--series-1", pattern: "" },
+    { key: "employ", label: "Employment", color: "--series-2", pattern: "/" },
+    { key: "tr_inc", label: "Transfer income", color: "--series-3", pattern: "x" },
+    { key: "tr_share", label: "Transfer share", color: "--series-4", pattern: "." },
+    { key: "other", label: "Other income", color: "--series-5", pattern: "-" }
   ];
 
   const num = v => (v === "" || v === undefined ? NaN : +v);
@@ -147,7 +147,7 @@
   function baseLayout() {
     return {
       paper_bgcolor: css("--surface-1"), plot_bgcolor: css("--surface-1"),
-      font: { family: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif", size: 13, color: css("--text-secondary") },
+      font: { family: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif", size: 14, color: css("--text-secondary") },
       margin: { l: 56, r: 16, t: 36, b: 40 },
       hoverlabel: { align: "left", bgcolor: css("--surface-1"), bordercolor: css("--border"), font: { color: css("--text-primary") } },
       legend: { orientation: "h", y: 1.01, yanchor: "bottom", x: 0, font: { color: css("--text-primary") } }
@@ -158,8 +158,16 @@
   const CONFIG = { responsive: true, displaylogo: false,
     modeBarButtonsToRemove: ["lasso2d", "select2d", "autoScale2d"] };
 
+  const isNarrow = () => window.innerWidth < 600;
+  let announceTimer;
+  function announce(msg) {          // screen-reader status message after a control changes
+    const el = $("status"); el.textContent = "";
+    clearTimeout(announceTimer);
+    announceTimer = setTimeout(() => { el.textContent = msg; }, 250);
+  }
+
   // --------------------------------------------------------------- state ----
-  const state = { ptype: "wave", from: 1, to: 7, group: "all", sort: "grd", cmp: ["", "", ""], table: false, exact: false };
+  const state = { ptype: "wave", from: 1, to: 7, group: "all", sort: "grd", cmp: ["", "", ""], table: false, agirTable: false, exact: false };
 
   function periodsAvailable(ptype) {
     const s = new Set();
@@ -190,20 +198,25 @@
       const v = a && b ? `${a.v.toFixed(2)} → ${b.v.toFixed(2)}` : "–";
       const ch = a && b ? `${fmt(100 * (b.v - a.v), 0)} points` : "";
       const nimp = (a ? a.imp.length : 0) + (b ? b.imp.length : 0);
-      const impNote = nimp ? `<div class="s imp">Partially imputed: ${[...new Set([...(a ? a.imp : []), ...(b ? b.imp : [])])].join(", ")} carried forward from their latest survey.</div>` : "";
-      return `<div class="tile"><div class="k"><span class="swatch" style="background:${css(col)}"></span>${g} countries, average Age Group Income Ratio${nimp ? " *" : ""}</div>
+      const popId = `imp-${g}`;
+      const impNote = nimp ? `<button type="button" class="imp-btn" aria-expanded="false" aria-controls="${popId}" aria-label="Partially imputed: show which countries"><span aria-hidden="true">i</span></button>
+        <div class="imp-pop" id="${popId}" role="note" hidden><strong>Partially imputed.</strong> ${[...new Set([...(a ? a.imp : []), ...(b ? b.imp : [])])].join(", ")} carried forward from their latest survey.</div>` : "";
+      return `<div class="tile"><div class="k"><span class="swatch" aria-hidden="true" style="background:${css(col)}"></span>${g} countries, average Age Group Income Ratio${nimp ? " *" : ""}</div>
         <div class="v">${v}</div><div class="s">${label(state.ptype, state.from)} to ${label(state.ptype, state.to)} ${ch ? "· " + ch : ""}</div>${impNote}</div>`;
     }).join("");
   }
 
   // ------------------------------------------------------------ chart 1 ----
+  let agirTbl = [];
   function renderAgir() {
-    const traces = [];
+    const traces = [], summ = [], tbl = [];
     const xs = d => d.map(p => (state.ptype === "wave" ? WAVES[p.t] : p.t));
     // each line has its own marker shape; filled = observed, open = partially imputed
     [["High-income", "--series-1", "solid", "circle"], ["Middle-income", "--series-2", "dash", "square"]].forEach(([g, col, dash, sym]) => {
       const s = groupSeries(countries.filter(c => groupOf(c) === g && !CAVEAT[c]), state.ptype);
       const c = css(col);
+      tbl.push({ name: `${g} average`, pts: s.map(d => ({ t: d.t, v: d.v, ci: 1.96 * d.se, imp: d.imp.length > 0 })) });
+      summ.push(`${g} average: ` + s.map(d => `${label(state.ptype, d.t)} ${d.v.toFixed(2)}${d.imp.length ? " (partly imputed)" : ""}`).join(", ") + ".");
       traces.push({ x: xs(s), y: s.map(d => d.v + 1.96 * d.se), mode: "lines", line: { width: 0 }, hoverinfo: "skip", showlegend: false });
       traces.push({ x: xs(s), y: s.map(d => d.v - 1.96 * d.se), mode: "lines", line: { width: 0 }, fill: "tonexty",
         fillcolor: hexA(c, 0.15), hoverinfo: "skip", showlegend: false });
@@ -227,6 +240,9 @@
       const col = css(cols[i]);
       const pts = grid.map(t => obs[t] || { t, v: null, se: null });
       const miss = grid.filter(t => !obs[t]).map(t => label(state.ptype, t));
+      const seen = pts.filter(d => d.v !== null);
+      tbl.push({ name: withMark(c), pts: seen.map(d => ({ t: d.t, v: d.v, ci: 1.96 * d.se, imp: false })) });
+      summ.push(`${c}: ` + seen.map(d => `${label(state.ptype, d.t)} ${d.v.toFixed(2)}`).join(", ") + (miss.length ? `; no data for ${miss.join(", ")}` : "") + ".");
       if (miss.length) noData.push(`${c}: ${miss.join(", ")}`);
       traces.push({ x: xs(pts), y: pts.map(d => d.v), name: withMark(c), mode: "lines+markers", connectgaps: true,
         line: { color: col, width: 2 }, marker: { size: 12, symbol: syms[i], color: col, line: { color: css("--surface-1"), width: 1 } },
@@ -239,16 +255,34 @@
     lay.yaxis = axis({ title: { text: "Age Group Income Ratio, 55–64 / 25–34", font: { color: css("--text-secondary") } } });
     lay.shapes = [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: 1, y1: 1, line: { color: css("--text-muted"), width: 1, dash: "dot" } }];
     lay.hovermode = "x unified";
+    if (isNarrow()) { lay.margin.r = 24; lay.margin.b = 64; lay.xaxis.automargin = true; lay.xaxis.tickangle = -40; lay.xaxis.tickfont = { size: 12, color: css("--text-secondary") }; }
     Plotly.react("agirChart", traces, lay, CONFIG);
-    $("agirNote").innerHTML = "<strong>Partially imputed values.</strong> Group averages keep every country in every period: when a country has no survey in a period, its latest available Age Group Income Ratio is carried forward. Filled markers are observed values; hollow markers show averages that include carried-forward values (hover to see which countries). " +
+    $("agirSummary").textContent = "Line chart of the Age Group Income Ratio, 55 to 64 year-olds over 25 to 34 year-olds, by period. A value above 1 means older people have the higher average income. " + summ.join(" ");
+    agirTbl = tbl; renderAgirTable();
+    const how = "<strong>Partially imputed values.</strong> Group averages keep every country in every period: when a country has no survey in a period, its latest available Age Group Income Ratio is carried forward. Hover a hollow marker to see which countries. " +
       (state.ptype === "year" ? "With single years, many values are carried forward between surveys, so waves are more reliable. " : "") +
-      "Shaded bands (group averages) and vertical lines (countries) are 95% confidence intervals. Dotted line: equal incomes. South Africa is not in the group averages. Country lines show observed values only." +
+      "South Africa is not in the group averages. Country lines show observed values only.";
+    $("agirNote").innerHTML = "Filled markers are observed values; hollow markers include carried-forward values. Shaded bands (group averages) and vertical lines (countries) are 95% confidence intervals. Dotted line: equal incomes." +
+      `<button type="button" class="imp-btn inline" aria-expanded="false" aria-controls="imp-agir" aria-label="How group averages are built: show details"><span aria-hidden="true">i</span></button><div class="imp-pop" id="imp-agir" role="note" hidden>${how}</div>` +
       (noData.length ? `<br><strong>No data</strong> (no marker; the line only joins observed surveys, nothing is imputed): ${noData.join("; ")}.` : "") +
       state.cmp.filter(c => c && NOTES[c]).map(c => `<br><strong>${c}${NOTE_MARK}</strong> ${noteText(c)}`).join("");
   }
 
+  function renderAgirTable() {
+    const w = $("agirTableWrap");
+    w.hidden = !state.agirTable;
+    $("toggleAgirTable").textContent = state.agirTable ? "Hide table" : "Show table";
+    $("toggleAgirTable").setAttribute("aria-expanded", String(state.agirTable));
+    if (!state.agirTable) return;
+    const ps = periodsAvailable(state.ptype);
+    w.innerHTML = `<table><caption class="sr-only">Age Group Income Ratio by period, with 95% confidence interval</caption><thead><tr><th scope="col">Period</th>${agirTbl.map(s => `<th scope="col">${s.name}</th>`).join("")}</tr></thead><tbody>` +
+      ps.map(t => `<tr><th scope="row">${label(state.ptype, t)}</th>${agirTbl.map(s => { const d = s.pts.find(x => x.t === t); return `<td>${d ? `${d.v.toFixed(2)} ±${d.ci.toFixed(2)}${d.imp ? " *" : ""}` : "no data"}</td>`; }).join("")}</tr>`).join("") +
+      `</tbody></table><p class="note">Ratio ± 95% confidence interval. * partially imputed (some countries&rsquo; values carried forward).</p>`;
+  }
+
   // ------------------------------------------------------------ chart 2 ----
   let current = [];
+  let decompAnnounce = "";
   function renderDecomp() {
     const { ptype, from, to } = state;
     $("decompTitle").textContent = `What drove the change, ${label(ptype, from)} to ${label(ptype, to)}`;
@@ -258,6 +292,7 @@
       Plotly.purge("decompChart");
       $("decompChart").innerHTML = `<p class="note">Choose a “To” period after the “From” period.</p>`;
       $("missingNote").textContent = ""; $("tableWrap").innerHTML = ""; current = [];
+      $("decompSummary").textContent = decompAnnounce = "Choose a To period after the From period.";
       return;
     }
     list.forEach(c => { const d = decomp(c, ptype, from, to); d ? res.push(d) : missing.push(c); });
@@ -267,11 +302,16 @@
     const avg = g => {
       const a = res.filter(r => r.group === g && !CAVEAT[r.country]);
       if (!a.length) return null;
-      const o = { country: `${g} avg`, group: g, isAvg: true };
+      const o = { country: g, group: g, isAvg: true };
       ["growth", ...MARGINS.map(m => m.key)].forEach(k => { o[k] = a.reduce((s, r) => s + r[k], 0) / a.length; });
       return o;
     };
     const avgs = ["Middle-income", "High-income"].filter(g => state.group === "all" || state.group === g).map(avg).filter(Boolean);
+    const parts = avgs.slice().reverse().map(r => `${r.country} average: total ${fmt(r.growth)} percentage points per year (wages ${fmt(r.wage)}, employment ${fmt(r.employ)}, transfer income ${fmt(r.tr_inc)}, transfer share ${fmt(r.tr_share)}, other income ${fmt(r.other)}).`);
+    const byG = res.slice().sort((a, b) => b.growth - a.growth);
+    const ext = byG.length ? ` Among the ${byG.length} countries shown, the total ranges from ${fmt(byG[byG.length - 1].growth)} (${byG[byG.length - 1].country}) to ${fmt(byG[0].growth)} (${byG[0].country}).` : "";
+    $("decompSummary").textContent = `Bar chart of the annual growth rate differential between people aged 55 to 64 and 25 to 34, split into wages, employment, transfer income, transfer share and other income, in percentage points per year. Positive values widen the gap in favour of the old. ${parts.join(" ")}${ext} Use the Show table button for all values.`;
+    decompAnnounce = `${$("decompTitle").textContent}. ${parts.join(" ")}`;
     const all = [...res, ...avgs];   // plotted bottom-to-top, so averages appear on top
     current = [...avgs.slice().reverse(), ...res.slice().reverse()];
     const yname = r => r.isAvg ? `<b>${r.country}</b>` : withMark(r.country);
@@ -281,7 +321,8 @@
     const traces = MARGINS.map(m => ({
       type: "bar", orientation: "h", name: m.label, y: ys, x: all.map(r => r[m.key]),
       customdata: all.map((r, j) => [...span[j], fmt(r[m.key])]),
-      marker: { color: css(m.color), line: { color: css("--surface-1"), width: 1 } },
+      marker: { color: css(m.color), line: { color: css("--surface-1"), width: 1 },
+        pattern: { shape: m.pattern, fillmode: "overlay", fgcolor: css("--surface-1"), fgopacity: 0.55, size: 7, solidity: 0.3 } },
       hovertemplate: `<b>%{y}</b> (%{customdata[0]})<br>${m.label}: %{customdata[2]} pp/yr%{customdata[1]}<extra></extra>`
     }));
     traces.push({ type: "scatter", mode: "markers", name: "Total (GRD)", y: ys, x: all.map(r => r.growth), customdata: all.map((r, j) => [...span[j], fmt(r.growth)]),
@@ -289,10 +330,19 @@
       hovertemplate: `<b>%{y}</b> (%{customdata[0]})<br>Total GRD: %{customdata[2]} pp/yr%{customdata[1]}<extra></extra>` });
     const lay = baseLayout();
     lay.barmode = "relative"; lay.bargap = 0.3;
-    lay.margin.l = 170;
-    lay.height = Math.max(360, 26 * all.length + 110);
+    const narrow = isNarrow();
+    // on phones the labels get only the room they need, so the bars use the full width
+    lay.margin = narrow ? { l: 8, r: 8, t: 36, b: 56 } : Object.assign(lay.margin, { l: 170 });
+    lay.height = Math.max(360, (narrow ? 30 : 26) * all.length + 130);
+    lay.legend.font.size = narrow ? 12 : 14;
+    if (narrow) {   // country names sit above their bars, so the bars span the full width
+      lay.height = Math.max(360, 42 * all.length + 130);
+      lay.bargap = 0.5;
+      lay.annotations = ys.map(y => ({ xref: "paper", yref: "y", x: 0, y, xanchor: "left", yanchor: "middle", yshift: 19,
+        showarrow: false, text: y, font: { size: 12, color: css("--text-primary") } }));
+    }
     lay.xaxis = axis({ title: { text: "percentage points per year", font: { color: css("--text-secondary") } }, zeroline: true, zerolinewidth: 1.5 });
-    lay.yaxis = axis({ automargin: true, tickfont: { color: css("--text-primary") } });
+    lay.yaxis = axis({ automargin: true, showticklabels: !narrow, showgrid: !narrow, tickfont: { size: 14, color: css("--text-primary") } });
     lay.hovermode = "closest";
     Plotly.react("decompChart", traces, lay, CONFIG);
     const notes = [];
@@ -300,8 +350,8 @@
     if (moved.length) notes.push(`Nearest available periods used for: ${moved.map(r => `${r.country} (${label(ptype, r.from)} to ${label(ptype, r.to)})`).join(", ")}.`);
     if (missing.length) notes.push(`Not shown, ${state.exact ? "no data in both periods" : "fewer than two periods in the range"}: ${missing.join(", ")}.`);
     const noted = res.filter(r => NOTES[r.country]).map(r => r.country);
-    if (noted.length) notes.push(`${NOTE_MARK} Country notes apply to: ${noted.join(", ")} (hover a bar, or see “Country notes” below).`);
-    $("missingNote").textContent = notes.join(" ");
+    if (noted.length) notes.push(`${NOTE_MARK} Country notes apply to: ${noted.join(", ")} (hover or tap a bar, or <a href="#country-notes" class="notes-link">read the country notes</a>).`);
+    $("missingNote").innerHTML = notes.join(" ");
     renderTable();
   }
 
@@ -309,9 +359,10 @@
     const wrap = $("tableWrap");
     wrap.hidden = !state.table;
     $("toggleTable").textContent = state.table ? "Hide table" : "Show table";
+    $("toggleTable").setAttribute("aria-expanded", String(state.table));
     if (!state.table) return;
     const cols = [["growth", "Total GRD"], ...MARGINS.map(m => [m.key, m.label])];
-    wrap.innerHTML = `<table><thead><tr><th>Country</th><th>Periods</th>${cols.map(c => `<th>${c[1]}</th>`).join("")}</tr></thead><tbody>` +
+    wrap.innerHTML = `<table><caption class="sr-only">Decomposition of the growth rate differential, percentage points per year</caption><thead><tr><th scope="col">Country</th><th scope="col">Periods</th>${cols.map(c => `<th scope="col">${c[1]}</th>`).join("")}</tr></thead><tbody>` +
       current.map(r => `<tr class="${r.isAvg ? "group" : ""}"><td>${r.country}</td><td>${r.isAvg ? "" : label(state.ptype, r.from) + " to " + label(state.ptype, r.to)}</td>${cols.map(c => `<td>${fmt(r[c[0]])}</td>`).join("")}</tr>`).join("") +
       `</tbody></table><p class="note">Percentage points per year.</p>`;
   }
@@ -333,16 +384,56 @@
   $("ptype").addEventListener("change", e => {
     state.ptype = e.target.value;
     if (state.ptype === "year") { state.from = 2004; state.to = 2022; } else { state.from = 1; state.to = 7; }
-    fillPeriods(); renderAll();
+    fillPeriods(); renderAll(); announce(decompAnnounce);
   });
-  $("from").addEventListener("change", e => { state.from = +e.target.value; renderTiles(); renderDecomp(); });
-  $("to").addEventListener("change", e => { state.to = +e.target.value; renderTiles(); renderDecomp(); });
-  $("group").addEventListener("change", e => { state.group = e.target.value; renderDecomp(); });
-  $("exact").addEventListener("change", e => { state.exact = e.target.value === "exact"; renderDecomp(); });
-  $("sort").addEventListener("change", e => { state.sort = e.target.value; renderDecomp(); });
-  ["c1", "c2", "c3"].forEach((id, i) => $(id).addEventListener("change", e => { state.cmp[i] = e.target.value; renderAgir(); }));
+  $("from").addEventListener("change", e => { state.from = +e.target.value; renderTiles(); renderDecomp(); announce(decompAnnounce); });
+  $("to").addEventListener("change", e => { state.to = +e.target.value; renderTiles(); renderDecomp(); announce(decompAnnounce); });
+  $("group").addEventListener("change", e => { state.group = e.target.value; renderDecomp(); announce(decompAnnounce); });
+  $("exact").addEventListener("change", e => { state.exact = e.target.value === "exact"; renderDecomp(); announce(decompAnnounce); });
+  $("sort").addEventListener("change", e => { state.sort = e.target.value; renderDecomp(); announce(decompAnnounce); });
+  ["c1", "c2", "c3"].forEach((id, i) => $(id).addEventListener("change", e => { state.cmp[i] = e.target.value; renderAgir(); announce("Comparison updated: " + (state.cmp.filter(Boolean).join(", ") || "no countries selected") + "."); }));
   $("toggleTable").addEventListener("click", () => { state.table = !state.table; renderTable(); });
+  $("toggleAgirTable").addEventListener("click", () => { state.agirTable = !state.agirTable; renderAgirTable(); });
   $("download").addEventListener("click", download);
+  // small "i" button on a tile opens/closes the imputation note (click outside or Escape closes it)
+  function closePops(except) {
+    document.querySelectorAll(".imp-pop").forEach(p => {
+      if (p === except) return;
+      p.hidden = true;
+      const b = document.querySelector(`[aria-controls="${p.id}"]`);
+      if (b) b.setAttribute("aria-expanded", "false");
+    });
+  }
+  document.addEventListener("click", e => {
+    const b = e.target.closest(".imp-btn");
+    if (!b) { if (!e.target.closest(".imp-pop")) closePops(); return; }
+    const p = $(b.getAttribute("aria-controls"));
+    closePops(p);
+    p.hidden = !p.hidden;
+    b.setAttribute("aria-expanded", String(!p.hidden));
+  });
+  document.addEventListener("keydown", e => {
+    if (e.key !== "Escape") return;
+    const open = document.querySelector(".imp-btn[aria-expanded='true']");
+    closePops();
+    if (open) open.focus();
+  });
+  // "country notes" links open the notes section (touch screens have no hover)
+  document.addEventListener("click", e => {
+    const a = e.target.closest("a.notes-link");
+    if (!a) return;
+    e.preventDefault();
+    const d = $("country-notes");
+    d.open = true;
+    d.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+    d.querySelector("summary").focus();
+  });
+  // re-lay out the charts when the screen crosses the phone breakpoint (e.g. rotation)
+  let wasNarrow = isNarrow(), resizeTimer;
+  window.addEventListener("resize", () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => { if (isNarrow() !== wasNarrow) { wasNarrow = isNarrow(); renderAgir(); renderDecomp(); } }, 200);
+  });
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
 
   $("countryNotes").innerHTML = Object.keys(NOTES).sort().map(c =>
