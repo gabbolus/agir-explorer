@@ -10,6 +10,14 @@ The **Age Group Income Ratio** is the average disposable income of people aged 5
 
 **Live site:** https://&lt;your-user&gt;.github.io/agir-explorer/
 
+## The paper
+
+Guaitoli, G. and Pancrazi, R. (2026), "Age-Income Gaps: The Role of Skill Congestion", *European Economic Review*. https://doi.org/10.1016/j.euroecorev.2026.105408
+
+**Abstract.** We study age-income gaps across 32 countries over 2004–2018 using harmonized microdata from the Luxembourg Income Study. We document a striking divergence: the ratio of disposable income of late-career workers (aged 55–64) relative to early-career workers (aged 25–34), which we name the Age Group Income Ratio (AGIR), rose by 18 percentage points in rich countries but fell by 8 percentage points in poor economies. This divergence operates primarily through the employment margin, which accounts for two-thirds of rising AGIR in rich countries and that conventional age-earnings measures miss entirely. To explain these patterns, we develop an overlapping generations model that discriminates among six competing mechanisms. In rich countries, skill congestion – late-career cohorts catching up with early-career workers in educational attainment and crowding them out of skilled labour markets – is the dominant driver of both margins. In poor countries, productivity growth dominates and skill congestion reduces rather than raises income inequality, as the young are expanding their college attainment more rapidly than the old.
+
+The dashboard extends the paper's data beyond 2018 and adds new countries.
+
 ## Data and methods
 
 - **Source:** Luxembourg Income Study (LIS) Database, accessed through LISSY in October 2026. All figures are aggregate statistics computed by the authors. No microdata are included.
