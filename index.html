@@ -6,9 +6,9 @@
   <meta name="color-scheme" content="light dark">
   <title>Age Group Income Ratio Explorer</title>
   <meta name="description" content="Age Group Income Ratio and the decomposition of its growth, from LIS microdata. Guaitoli and Pancrazi.">
-  <link rel="stylesheet" href="assets/style.css?v=20261024d">
+  <link rel="stylesheet" href="assets/style.css?v=20261024g">
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
-  <script src="data/agir_data.js?v=20261024d"></script>
+  <script src="data/agir_data.js?v=20261024g"></script>
 </head>
 <body>
 <div class="viz-root">
@@ -117,6 +117,7 @@
       <span class="term"><span class="chip young">25&ndash;34</span> income growth</span></span>
     </div>
     <p class="same">Income growth is the change in average income between the two chosen periods, as a percentage of initial income, per year. GRD stands for Growth Rate Differential and is measured in percentage points per year.</p>
+    <p class="drivers">Income growth depends on the change in <span class="mchip m1">wages</span>, <span class="mchip m2">employment</span>, the <span class="mchip m4">share</span> of people receiving a transfer, and the <span class="mchip m3">size</span> of such transfers.</p>
     <p class="note">A positive GRD means the gap in favour of the old is widening (the Age Group Income Ratio rises by roughly that many per cent per year); a negative one means it is narrowing. The dark marker in the chart is the total GRD. Each coloured bar is one margin&rsquo;s share of it. <strong>Each margin compares the old with the young: positive means the old gains more (or loses less) than the young on that margin; negative means the young do better.</strong></p>
     <div class="mcards">
       <div class="mcard" style="--c: var(--series-1)">
@@ -173,10 +174,23 @@
     <p>Country-specific data issues relevant for interpretation. Countries with a note are marked with † in the charts.</p>
     <div id="countryNotes"></div>
   </details>
+
+  <section class="card limits" aria-labelledby="limTitle">
+    <h2 id="limTitle">Limitations</h2>
+    <p class="note">What the numbers can and cannot tell you.</p>
+    <ul>
+      <li><strong>Averages, not distributions.</strong> The ratio compares the average income of two age groups. It does not show how income is distributed <em>within</em> each group.</li>
+      <li><strong>Capital income and wealth are not observed.</strong> The data have no individual-level capital income, and wealth is increasingly concentrated among older people. The ratio therefore likely understates the age-income gap, and its rise, in high-income countries: read it as a lower bound.</li>
+      <li><strong>Individual income only.</strong> Income is personal labour income plus personal transfers, net of income taxes. Household-wide benefits (child allowances, housing benefits) are left out; in the paper, adding them gave similar results for 2004&ndash;2018.</li>
+      <li><strong>Accounting, not causes.</strong> The decomposition shows which income component moved, not why. It also approximates the change in the Age Group Income Ratio well only when growth is small. Explanations such as skill congestion come from the paper&rsquo;s model, not from this dashboard.</li>
+      <li><strong>Uneven and incomplete coverage.</strong> Countries are surveyed in different years and some recent periods are missing. Group averages carry the last available value forward (partially imputed); country lines and the decomposition use observed values only.</li>
+      <li><strong>Breaks and the pandemic.</strong> Changes in surveys can move the numbers; see the &dagger; notes (for example Mexico 2024 and South Africa 2023). In 2019&ndash;21, job-retention schemes are recorded as wages in some countries and as transfers in others, which shifts weight between those two margins.</li>
+    </ul>
+  </section>
 </main>
   <div id="noteTip" class="tip" role="tooltip" hidden></div>
   <footer class="foot">Data: Luxembourg Income Study (LIS) Database, (multiple countries; microdata runs completed on 22 October 2026). Luxembourg: LIS. All figures are aggregates computed by the authors.</footer>
 </div>
-<script src="assets/app.js?v=20261024d"></script>
+<script src="assets/app.js?v=20261024g"></script>
 </body>
 </html>
