@@ -204,12 +204,14 @@
     [["High-income", "--series-1", "solid", "circle"], ["Middle-income", "--series-2", "dash", "square"]].forEach(([g, col, dash, sym]) => {
       const s = groupSeries(countries.filter(c => groupOf(c) === g && !CAVEAT[c]), state.ptype);
       const c = css(col);
+      traces.push({ x: xs(s), y: s.map(d => d.v + 1.96 * d.se), mode: "lines", line: { width: 0 }, hoverinfo: "skip", showlegend: false });
+      traces.push({ x: xs(s), y: s.map(d => d.v - 1.96 * d.se), mode: "lines", line: { width: 0 }, fill: "tonexty",
+        fillcolor: hexA(c, 0.15), hoverinfo: "skip", showlegend: false });
       const impTxt = d => d.imp.length ? `<br><i>partially imputed: ${d.imp.length} of ${d.n} carried forward</i><br>(${d.imp.join(", ")})` : "";
       traces.push({ x: xs(s), y: s.map(d => d.v), name: `${g} average`, mode: "lines+markers",
         line: { color: c, width: 2, dash },
         marker: { size: 9, symbol: s.map(d => d.imp.length ? `${sym}-open` : sym), color: c,
           line: { color: s.map(d => d.imp.length ? c : css("--surface-1")), width: 2 } },
-        error_y: { type: "data", array: s.map(d => 1.96 * d.se), color: c, thickness: 2.5, width: 6 },
         customdata: s.map(d => [d.n, d.se, impTxt(d)]),
         hovertemplate: `<b>${g} average</b><br>%{x}: %{y:.3f}<br>±%{customdata[1]:.3f} SE · %{customdata[0]} countries%{customdata[2]}<extra></extra>` });
     });
@@ -228,7 +230,7 @@
       if (miss.length) noData.push(`${c}: ${miss.join(", ")}`);
       traces.push({ x: xs(pts), y: pts.map(d => d.v), name: withMark(c), mode: "lines+markers", connectgaps: true,
         line: { color: col, width: 2 }, marker: { size: 12, symbol: syms[i], color: col, line: { color: css("--surface-1"), width: 1 } },
-        error_y: { type: "data", array: pts.map(d => (d.se === null ? null : 1.96 * d.se)), color: col, thickness: 2.5, width: 6 },
+        error_y: { type: "data", array: pts.map(d => (d.se === null ? null : 1.96 * d.se)), color: hexA(col, 0.8), thickness: 1.75, width: 3 },
         hovertemplate: `<b>${c}</b><br>%{x}: %{y:.3f}<extra></extra>` });
     });
     const lay = baseLayout();
@@ -240,7 +242,7 @@
     Plotly.react("agirChart", traces, lay, CONFIG);
     $("agirNote").innerHTML = "<strong>Partially imputed values.</strong> Group averages keep every country in every period: when a country has no survey in a period, its latest available Age Group Income Ratio is carried forward. Filled markers are observed values; hollow markers show averages that include carried-forward values (hover to see which countries). " +
       (state.ptype === "year" ? "With single years, many values are carried forward between surveys, so waves are more reliable. " : "") +
-      "Vertical lines are 95% confidence intervals. Dotted line: equal incomes. South Africa is not in the group averages. Country lines show observed values only." +
+      "Shaded bands (group averages) and vertical lines (countries) are 95% confidence intervals. Dotted line: equal incomes. South Africa is not in the group averages. Country lines show observed values only." +
       (noData.length ? `<br><strong>No data</strong> (no marker; the line only joins observed surveys, nothing is imputed): ${noData.join("; ")}.` : "") +
       state.cmp.filter(c => c && NOTES[c]).map(c => `<br><strong>${c}${NOTE_MARK}</strong> ${noteText(c)}`).join("");
   }
