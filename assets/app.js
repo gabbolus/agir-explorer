@@ -211,7 +211,7 @@
   // ------------------------------------------------------------ chart 1 ----
   let agirTbl = [];
   function renderAgir() {
-    const traces = [], summ = [], tbl = [];
+    const traces = [], summ = [], tbl = [], impAll = {};
     const xs = d => d.map(p => (state.ptype === "wave" ? WAVES[p.t] : p.t));
     // each line has its own marker shape; filled = observed, open = partially imputed
     [["High-income", "--series-1", "solid", "circle"], ["Middle-income", "--series-2", "dash", "square"]].forEach(([g, col, dash, sym]) => {
@@ -222,13 +222,13 @@
       traces.push({ x: xs(s), y: s.map(d => d.v + 1.96 * d.se), mode: "lines", line: { width: 0 }, hoverinfo: "skip", showlegend: false });
       traces.push({ x: xs(s), y: s.map(d => d.v - 1.96 * d.se), mode: "lines", line: { width: 0 }, fill: "tonexty",
         fillcolor: hexA(c, 0.15), hoverinfo: "skip", showlegend: false });
-      const impTxt = d => d.imp.length ? `<br>${wrap(`partially imputed: ${d.imp.length} of ${d.n} carried forward (${d.imp.join(", ")})`)}` : "";
+      impAll[g] = [...new Set(s.flatMap(d => d.imp))];
       traces.push({ x: xs(s), y: s.map(d => d.v), name: `${g} average`, mode: "lines+markers",
         line: { color: c, width: 2, dash },
         marker: { size: 9, symbol: s.map(d => d.imp.length ? `${sym}-open` : sym), color: c,
           line: { color: s.map(d => d.imp.length ? c : css("--surface-1")), width: 2 } },
-        customdata: s.map(d => [d.n, d.se, impTxt(d)]),
-        hovertemplate: `<b>${g} average</b><br>%{x}: %{y:.3f}<br>±%{customdata[1]:.3f} SE · %{customdata[0]} countries%{customdata[2]}<extra></extra>` });
+        customdata: s.map(d => [d.n]),
+        hovertemplate: `<b>${g} average</b><br>%{x}: %{y:.3f}<br>%{customdata[0]} countries<extra></extra>` });
     });
     const cols = ["--series-3", "--series-4", "--series-5"];
     const syms = ["diamond", "triangle-up", "star"];
@@ -261,7 +261,8 @@
     Plotly.react("agirChart", traces, lay, CONFIG);
     $("agirSummary").textContent = "Line chart of the Age Group Income Ratio, 55 to 64 year-olds over 25 to 34 year-olds, by period. A value above 1 means older people have the higher average income. " + summ.join(" ");
     agirTbl = tbl; renderAgirTable();
-    const how = "<strong>Partially imputed values.</strong> Group averages keep every country in every period: when a country has no survey in a period, its latest available Age Group Income Ratio is carried forward. Hover a hollow marker to see which countries. " +
+    const how = "<strong>Partially imputed values.</strong> Group averages keep every country in every period: when a country has no survey in a period, its latest available Age Group Income Ratio is carried forward. " +
+      ["High-income", "Middle-income"].filter(g => impAll[g] && impAll[g].length).map(g => `<br><strong>${g}, carried forward in at least one period:</strong> ${impAll[g].join(", ")}.`).join("") + "<br>" +
       (state.ptype === "year" ? "With single years, many values are carried forward between surveys, so waves are more reliable. " : "") +
       "South Africa is not in the group averages. Country lines show observed values only.";
     $("agirNote").innerHTML = "Filled markers are observed values; hollow markers include carried-forward values. Shaded bands (group averages) and vertical lines (countries) are 95% confidence intervals. Dotted line: equal incomes." +
@@ -323,7 +324,7 @@
     };
     const ys = all.map(yname);
     const span = all.map(r => [r.isAvg ? "group average" : `${label(ptype, r.from)} to ${label(ptype, r.to)}`,
-      !r.isAvg && NOTES[r.country] ? `<br><i>${NOTE_MARK} ${wrap(noteText(r.country))}</i>` : ""]);
+      ""]);
     const traces = MARGINS.map(m => ({
       type: "bar", orientation: "h", name: m.label, y: ys, x: all.map(r => r[m.key]),
       customdata: all.map((r, j) => [...span[j], fmt(r[m.key])]),
@@ -357,7 +358,7 @@
     if (moved.length) notes.push(`Nearest available periods used for: ${moved.map(r => `${r.country} (${label(ptype, r.from)} to ${label(ptype, r.to)})`).join(", ")}.`);
     if (missing.length) notes.push(`Not shown, ${state.exact ? "no data in both periods" : "fewer than two periods in the range"}: ${missing.join(", ")}.`);
     const noted = res.filter(r => NOTES[r.country]).map(r => r.country);
-    if (noted.length) notes.push(`${NOTE_MARK} Country notes apply to: ${noted.join(", ")} (hover or tap a bar, or <a href="#country-notes" class="notes-link">read the country notes</a>).`);
+    if (noted.length) notes.push(`${NOTE_MARK} Country notes apply to: ${noted.join(", ")} (hover or tap the country name, or <a href="#country-notes" class="notes-link">read the country notes</a>).`);
     $("missingNote").innerHTML = notes.join(" ");
     renderTable();
   }
@@ -385,6 +386,38 @@
     a.click();
     URL.revokeObjectURL(a.href);
   }
+
+  // ------------------------------------------------- notes on country names ----
+  const FULL = { UK: "United Kingdom", US: "United States" };
+  const tip = $("noteTip"), decompEl = $("decompChart");
+  function labelAt(x, y) {
+    for (const t of decompEl.querySelectorAll(".ytick text")) {
+      if (!t.textContent.includes(NOTE_MARK)) continue;
+      const r = t.getBoundingClientRect();
+      if (x >= r.left - 6 && x <= r.right + 6 && y >= r.top - 3 && y <= r.bottom + 3) {
+        const n = t.textContent.replace(NOTE_MARK, "").trim();
+        return NOTES[FULL[n] || n] ? FULL[n] || n : null;
+      }
+    }
+    return null;
+  }
+  function showTip(c, x, y) {
+    tip.innerHTML = `<strong>${c}${NOTE_MARK}</strong> ${noteText(c)}`;
+    tip.hidden = false;
+    const w = tip.offsetWidth, h = tip.offsetHeight;
+    tip.style.left = Math.max(8, Math.min(x + 14, window.innerWidth - w - 8)) + "px";
+    tip.style.top = (y + 18 + h > window.innerHeight ? Math.max(8, y - h - 12) : y + 18) + "px";
+  }
+  const hideTip = () => { tip.hidden = true; };
+  decompEl.addEventListener("mousemove", e => {
+    const c = labelAt(e.clientX, e.clientY);
+    decompEl.style.cursor = c ? "help" : "";
+    c ? showTip(c, e.clientX, e.clientY) : hideTip();
+  });
+  decompEl.addEventListener("mouseleave", hideTip);
+  decompEl.addEventListener("click", e => { const c = labelAt(e.clientX, e.clientY); c ? showTip(c, e.clientX, e.clientY) : hideTip(); });
+  document.addEventListener("scroll", hideTip, true);
+  document.addEventListener("keydown", e => { if (e.key === "Escape") hideTip(); });
 
   // ---------------------------------------------------------------- wire ----
   function renderAll() { renderTiles(); renderAgir(); renderDecomp(); }

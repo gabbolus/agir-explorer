@@ -238,3 +238,10 @@ th[scope="row"] { color: var(--text-primary); font-weight: 400; text-align: left
 .mcard .lab.pos::before { content: "\25B2\00a0"; color: var(--text-primary); }
 .mcard .lab.neg::before { content: "\25BC\00a0"; color: var(--text-primary); }
 .mcard .lab.pos { color: var(--text-primary); }
+
+/* note shown when hovering a country name in the decomposition chart */
+.tip { position: fixed; z-index: 30; max-width: min(320px, calc(100vw - 16px)); background: var(--surface-1); color: var(--text-secondary);
+  border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px; font-size: 14px; line-height: 1.4;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.2); pointer-events: none; }
+.tip[hidden] { display: none; }
+.tip strong { color: var(--text-primary); }
