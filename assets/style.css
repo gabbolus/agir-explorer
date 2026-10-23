@@ -256,3 +256,7 @@ th[scope="row"] { color: var(--text-primary); font-weight: 400; text-align: left
 
 .ctl-note { margin: 8px 0 6px; }
 #tiles:focus { outline: none; }
+
+/* controls sitting inside a card */
+.card .controls { background: none; border: 0; border-radius: 0; padding: 0; margin: 8px 0 10px; }
+.ctl-after { margin: 0 0 8px; }
