@@ -226,3 +226,13 @@ th[scope="row"] { color: var(--text-primary); font-weight: 400; text-align: left
 }
 .formula .grp { display: inline-flex; align-items: center; gap: 8px; flex-wrap: nowrap; white-space: nowrap; }
 .formula.grd .grp .term { flex-wrap: nowrap; }
+
+/* one card per margin */
+.mcards { display: grid; grid-template-columns: repeat(auto-fit, minmax(270px, 1fr)); gap: 10px; margin: 12px 0 16px; }
+.mcard { border: 1px solid var(--border); border-left: 6px solid var(--c); border-radius: 8px; padding: 10px 12px 12px; background: var(--surface-0); }
+.mcard h3 { margin: 0 0 8px; font-size: 15px; }
+.mcard p { margin: 6px 0 0; font-size: 14px; color: var(--text-secondary); }
+.mcard .lab { display: block; font-size: 12px; font-weight: 700; letter-spacing: 0.04em; text-transform: uppercase; color: var(--text-muted); }
+.mcard .lab.pos::before { content: "\25B2\00a0"; color: var(--text-primary); }
+.mcard .lab.neg::before { content: "\25BC\00a0"; color: var(--text-primary); }
+.mcard .lab.pos { color: var(--text-primary); }

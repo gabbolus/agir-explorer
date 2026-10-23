@@ -117,23 +117,39 @@
       <span class="term"><span class="chip young">25&ndash;34</span> income growth</span></span>
     </div>
     <p class="same">Income growth is the change in average income between the two chosen periods, as a percentage of initial income, per year. GRD stands for Growth Rate Differential and is measured in percentage points per year.</p>
-    <div class="formula grd sum" role="group" aria-label="The GRD is the sum of five margins">
-      <span class="chip total">GRD</span>
-      <span class="eq" aria-hidden="true">=</span>
-      <span class="mchip m1">Wages</span>
-      <span class="grp"><span class="eq" aria-hidden="true">+</span><span class="mchip m2">Employment</span></span>
-      <span class="grp"><span class="eq" aria-hidden="true">+</span><span class="mchip m3">Transfer income</span></span>
-      <span class="grp"><span class="eq" aria-hidden="true">+</span><span class="mchip m4">Transfer share</span></span>
-      <span class="grp"><span class="eq" aria-hidden="true">+</span><span class="mchip m5">Other income</span></span>
+    <p class="note">A positive GRD means the gap in favour of the old is widening (the Age Group Income Ratio rises by roughly that many per cent per year); a negative one means it is narrowing. The dark marker in the chart is the total GRD. Each coloured bar is one margin&rsquo;s share of it. <strong>Each margin compares the old with the young: positive means the old gains more (or loses less) than the young on that margin; negative means the young do better.</strong></p>
+    <div class="mcards">
+      <div class="mcard" style="--c: var(--series-1)">
+        <h3><span class="mchip m1">Wages</span></h3>
+        <p><span class="lab">What it is</span> How much the pay of people who have a job changes (net labour income per employed person).</p>
+        <p><span class="lab pos">Positive when</span> employed 55&ndash;64 year-olds&rsquo; pay grows faster than employed 25&ndash;34 year-olds&rsquo; pay.</p>
+        <p><span class="lab neg">Negative when</span> the young&rsquo;s pay grows faster.</p>
+      </div>
+      <div class="mcard" style="--c: var(--series-2)">
+        <h3><span class="mchip m2">Employment</span></h3>
+        <p><span class="lab">What it is</span> How the share of people in work changes, valued at what a worker earned at the start.</p>
+        <p><span class="lab pos">Positive when</span> the share of 55&ndash;64 year-olds in work rises faster than the share of 25&ndash;34 year-olds (for example, older people retiring later).</p>
+        <p><span class="lab neg">Negative when</span> the young&rsquo;s employment rate rises faster.</p>
+      </div>
+      <div class="mcard" style="--c: var(--series-3)">
+        <h3><span class="mchip m3">Transfer income</span></h3>
+        <p><span class="lab">What it is</span> How the size of the average transfer (pensions and other benefits) changes for those who receive one.</p>
+        <p><span class="lab pos">Positive when</span> the average benefit of the old grows faster than that of the young.</p>
+        <p><span class="lab neg">Negative when</span> the young&rsquo;s average benefit grows faster.</p>
+      </div>
+      <div class="mcard" style="--c: var(--series-4)">
+        <h3><span class="mchip m4">Transfer share</span></h3>
+        <p><span class="lab">What it is</span> How the share of people receiving any transfer changes, valued at the average transfer at the start.</p>
+        <p><span class="lab pos">Positive when</span> the share of 55&ndash;64 year-olds receiving transfers rises faster (or falls more slowly) than that of 25&ndash;34 year-olds.</p>
+        <p><span class="lab neg">Negative when</span> the young&rsquo;s share rises faster.</p>
+      </div>
+      <div class="mcard" style="--c: var(--series-5)">
+        <h3><span class="mchip m5">Other income</span></h3>
+        <p><span class="lab">What it is</span> Everything not captured by the four margins above, such as labour income of people not classified as employed.</p>
+        <p><span class="lab pos">Positive when</span> this part of the old&rsquo;s income grows faster than the young&rsquo;s.</p>
+        <p><span class="lab neg">Negative when</span> the young&rsquo;s grows faster.</p>
+      </div>
     </div>
-    <p class="note">A positive GRD means the gap in favour of the old is widening (the Age Group Income Ratio rises by roughly that many per cent per year); a negative one means it is narrowing. The dark marker in the chart is the total GRD; each coloured bar is one margin&rsquo;s contribution, for the old minus the young:</p>
-    <ul class="note margins">
-      <li><span class="mchip m1">Wages</span> change in net labour income of those in employment (holding the share employed at its final level).</li>
-      <li><span class="mchip m2">Employment</span> change in the employment rate, valued at the initial labour income of those in employment.</li>
-      <li><span class="mchip m3">Transfer income</span> change in the average transfer received by recipients (pensions and other benefits), holding the share of recipients at its final level.</li>
-      <li><span class="mchip m4">Transfer share</span> change in the share of people receiving transfers, valued at the initial average transfer.</li>
-      <li><span class="mchip m5">Other income</span> change in income not captured by the four margins above, such as labour income of people not classified as employed.</li>
-    </ul>
     <div id="decompLegend" class="legend" aria-hidden="true" hidden></div>
     <div id="decompChart" class="chart" role="img" aria-labelledby="decompTitle" aria-describedby="decompSummary"></div>
     <p id="decompSummary" class="sr-only"></p>
