@@ -8,7 +8,7 @@ The **Age Group Income Ratio** is the average disposable income of people aged 5
 - choose any two periods (3-year waves or single survey years) and split the change in the age-income gap into **wages, employment, transfer income, transfer share and other income**;
 - see the numbers as a table and download them as CSV.
 
-**Live site:** https://&lt;your-user&gt;.github.io/agir-explorer/
+**Live site:** [https://gabbolus.github.io/agir-explorer/](https://gabbolus.github.io/agir-explorer/)
 
 ## The paper
 
