@@ -30,11 +30,11 @@
     6: "2019–21", 7: "2022–24", 8: "2025–27" };
   const OLD = 5, YOUNG = 2;
   const MARGINS = [
-    { key: "wage", label: "Wages", color: "--series-1", pattern: "" },
-    { key: "employ", label: "Employment", color: "--series-2", pattern: "/" },
-    { key: "tr_inc", label: "Transfer income", color: "--series-3", pattern: "x" },
-    { key: "tr_share", label: "Transfer share", color: "--series-4", pattern: "." },
-    { key: "other", label: "Other income", color: "--series-5", pattern: "-" }
+    { key: "wage", label: "Wages", color: "--series-1" },
+    { key: "employ", label: "Employment", color: "--series-2" },
+    { key: "tr_inc", label: "Transfer income", color: "--series-3" },
+    { key: "tr_share", label: "Transfer share", color: "--series-4" },
+    { key: "other", label: "Other income", color: "--series-5" }
   ];
 
   const num = v => (v === "" || v === undefined ? NaN : +v);
@@ -148,15 +148,17 @@
     return {
       paper_bgcolor: css("--surface-1"), plot_bgcolor: css("--surface-1"),
       font: { family: "system-ui, -apple-system, Segoe UI, Roboto, sans-serif", size: 14, color: css("--text-secondary") },
+      dragmode: false,
       margin: { l: 56, r: 16, t: 36, b: 40 },
       hoverlabel: { align: "left", bgcolor: css("--surface-1"), bordercolor: css("--border"), font: { color: css("--text-primary") } },
       legend: { orientation: "h", y: 1.01, yanchor: "bottom", x: 0, font: { color: css("--text-primary") } }
     };
   }
-  const axis = extra => Object.assign({ gridcolor: css("--grid"), zerolinecolor: css("--text-muted"),
+  const axis = extra => Object.assign({ fixedrange: true, gridcolor: css("--grid"), zerolinecolor: css("--text-muted"),
     linecolor: css("--border"), tickfont: { color: css("--text-secondary") } }, extra);
-  const CONFIG = { responsive: true, displaylogo: false,
-    modeBarButtonsToRemove: ["lasso2d", "select2d", "autoScale2d"] };
+  // charts are fixed: no zoom or pan by touch, mouse or scroll (hover/tap for values still works)
+  const CONFIG = { responsive: true, displaylogo: false, scrollZoom: false, doubleClick: false,
+    modeBarButtonsToRemove: ["zoom2d", "pan2d", "zoomIn2d", "zoomOut2d", "autoScale2d", "resetScale2d", "lasso2d", "select2d"] };
 
   const isNarrow = () => window.innerWidth < 600;
   let announceTimer;
@@ -290,6 +292,7 @@
     const res = [], missing = [];
     if (from >= to) {
       Plotly.purge("decompChart");
+      $("decompLegend").hidden = true;
       $("decompChart").innerHTML = `<p class="note">Choose a “To” period after the “From” period.</p>`;
       $("missingNote").textContent = ""; $("tableWrap").innerHTML = ""; current = [];
       $("decompSummary").textContent = decompAnnounce = "Choose a To period after the From period.";
@@ -314,15 +317,17 @@
     decompAnnounce = `${$("decompTitle").textContent}. ${parts.join(" ")}`;
     const all = [...res, ...avgs];   // plotted bottom-to-top, so averages appear on top
     current = [...avgs.slice().reverse(), ...res.slice().reverse()];
-    const yname = r => r.isAvg ? `<b>${r.country}</b>` : withMark(r.country);
+    const yname = r => {   // on phones the label column is kept narrow so the bars get the room
+      const n = r.isAvg ? `<b>${r.country}</b>` : withMark(r.country);
+      return isNarrow() ? n.replace("United Kingdom", "UK").replace("United States", "US") : n;
+    };
     const ys = all.map(yname);
     const span = all.map(r => [r.isAvg ? "group average" : `${label(ptype, r.from)} to ${label(ptype, r.to)}`,
       !r.isAvg && NOTES[r.country] ? `<br><i>${NOTE_MARK} ${wrap(noteText(r.country))}</i>` : ""]);
     const traces = MARGINS.map(m => ({
       type: "bar", orientation: "h", name: m.label, y: ys, x: all.map(r => r[m.key]),
       customdata: all.map((r, j) => [...span[j], fmt(r[m.key])]),
-      marker: { color: css(m.color), line: { color: css("--surface-1"), width: 1 },
-        pattern: { shape: m.pattern, fillmode: "overlay", fgcolor: css("--surface-1"), fgopacity: 0.55, size: 7, solidity: 0.3 } },
+      marker: { color: css(m.color), line: { color: css("--surface-1"), width: 1 } },
       hovertemplate: `<b>%{y}</b> (%{customdata[0]})<br>${m.label}: %{customdata[2]} pp/yr%{customdata[1]}<extra></extra>`
     }));
     traces.push({ type: "scatter", mode: "markers", name: "Total (GRD)", y: ys, x: all.map(r => r.growth), customdata: all.map((r, j) => [...span[j], fmt(r.growth)]),
@@ -333,16 +338,18 @@
     const narrow = isNarrow();
     // on phones the labels get only the room they need, so the bars use the full width
     lay.margin = narrow ? { l: 8, r: 8, t: 36, b: 56 } : Object.assign(lay.margin, { l: 170 });
-    lay.height = Math.max(360, (narrow ? 30 : 26) * all.length + 130);
+    lay.height = Math.max(360, (narrow ? 28 : 26) * all.length + 130);
     lay.legend.font.size = narrow ? 12 : 14;
-    if (narrow) {   // country names sit above their bars, so the bars span the full width
-      lay.height = Math.max(360, 42 * all.length + 130);
-      lay.bargap = 0.5;
-      lay.annotations = ys.map(y => ({ xref: "paper", yref: "y", x: 0, y, xanchor: "left", yanchor: "middle", yshift: 19,
-        showarrow: false, text: y, font: { size: 12, color: css("--text-primary") } }));
-    }
+    // on phones the legend is plain HTML above the chart, so it can use the full width
+    lay.showlegend = !narrow;
+    if (narrow) lay.margin.t = 8;
+    const lg = $("decompLegend");
+    lg.hidden = !narrow;
+    lg.innerHTML = MARGINS.map(m => `<span><i class="sw" style="background:${css(m.color)}"></i>${m.label}</span>`).join("") +
+      `<span><i class="dia"></i>Total (GRD)</span>`;
+
     lay.xaxis = axis({ title: { text: "percentage points per year", font: { color: css("--text-secondary") } }, zeroline: true, zerolinewidth: 1.5 });
-    lay.yaxis = axis({ automargin: true, showticklabels: !narrow, showgrid: !narrow, tickfont: { size: 14, color: css("--text-primary") } });
+    lay.yaxis = axis({ automargin: true, tickfont: { size: narrow ? 11 : 14, color: css("--text-primary") } });
     lay.hovermode = "closest";
     Plotly.react("decompChart", traces, lay, CONFIG);
     const notes = [];
@@ -362,8 +369,8 @@
     $("toggleTable").setAttribute("aria-expanded", String(state.table));
     if (!state.table) return;
     const cols = [["growth", "Total GRD"], ...MARGINS.map(m => [m.key, m.label])];
-    wrap.innerHTML = `<table><caption class="sr-only">Decomposition of the growth rate differential, percentage points per year</caption><thead><tr><th scope="col">Country</th><th scope="col">Periods</th>${cols.map(c => `<th scope="col">${c[1]}</th>`).join("")}</tr></thead><tbody>` +
-      current.map(r => `<tr class="${r.isAvg ? "group" : ""}"><td>${r.country}</td><td>${r.isAvg ? "" : label(state.ptype, r.from) + " to " + label(state.ptype, r.to)}</td>${cols.map(c => `<td>${fmt(r[c[0]])}</td>`).join("")}</tr>`).join("") +
+    wrap.innerHTML = `<table><caption class="sr-only">Decomposition of the growth rate differential, percentage points per year</caption><thead><tr><th scope="col">Country</th><th scope="col" class="per">Periods</th>${cols.map(c => `<th scope="col">${c[1]}</th>`).join("")}</tr></thead><tbody>` +
+      current.map(r => `<tr class="${r.isAvg ? "group" : ""}"><td>${r.country}</td><td class="per">${r.isAvg ? "" : label(state.ptype, r.from) + " to " + label(state.ptype, r.to)}</td>${cols.map(c => `<td>${fmt(r[c[0]])}</td>`).join("")}</tr>`).join("") +
       `</tbody></table><p class="note">Percentage points per year.</p>`;
   }
 

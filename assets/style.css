@@ -174,3 +174,37 @@ th[scope="row"] { color: var(--text-primary); font-weight: 400; text-align: left
 #agirNote { position: relative; }
 .imp-btn.inline { position: relative; top: auto; right: auto; display: inline-flex; vertical-align: middle; margin-left: 8px; width: 24px; height: 24px; font-size: 13px; }
 #agirNote .imp-pop { top: calc(100% + 4px); left: 0; right: 0; }
+
+/* equation: the "same year" caption sits under it, so the fraction keeps its shape on phones */
+.readbox .same { margin: 0 0 14px; color: var(--text-secondary); font-style: italic; }
+.frac .sm { display: none; }
+@media (max-width: 600px) {
+  .frac .lg { display: none; }
+  .frac .sm { display: inline; }
+  .formula { gap: 8px; }
+  .formula .chip.agir { font-size: 18px; padding: 2px 10px; }
+  .formula .eq { font-size: 20px; }
+}
+
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 8px 0 4px; font-size: 14px; color: var(--text-primary); }
+.legend[hidden] { display: none; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend .sw { width: 12px; height: 12px; border-radius: 2px; display: inline-block; }
+.legend .dia { width: 10px; height: 10px; background: var(--total); transform: rotate(45deg); display: inline-block; margin: 0 1px; }
+
+/* margin names coloured as in the chart */
+.mchip { display: inline-block; padding: 0 8px; border-radius: 6px; font-weight: 700; color: #000; background: var(--c); }
+.mchip.m1 { --c: var(--series-1); } .mchip.m2 { --c: var(--series-2); } .mchip.m3 { --c: var(--series-3); }
+.mchip.m4 { --c: var(--series-4); } .mchip.m5 { --c: var(--series-5); }
+.note.margins li { margin: 6px 0; }
+
+/* steady touch behaviour: charts never zoom or pan; tables only scroll sideways */
+.chart { touch-action: pan-y pinch-zoom; }
+.table-wrap { touch-action: manipulation; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+.table-wrap th:first-child, .table-wrap td:first-child { position: sticky; left: 0; background: var(--surface-1); z-index: 1; }
+@media (max-width: 600px) {
+  .table-wrap .per { display: none; }
+  .table-wrap th { white-space: normal; line-height: 1.2; vertical-align: bottom; min-width: 58px; }
+  .table-wrap th:first-child { min-width: 0; }
+  .table-wrap th, .table-wrap td { padding: 6px 6px; }
+}
