@@ -109,7 +109,24 @@
         <button id="download" type="button">Download CSV</button>
       </div>
     </div>
-    <p class="note">Growth Rate Differential (GRD): annual income growth of 55&ndash;64 year-olds minus that of 25&ndash;34 year-olds, in percentage points per year, split into margins. Positive values widen the gap in favour of the old. The dark marker is the total. Each margin is the contribution of one income component, as a share of initial income, for the old minus the young:</p>
+    <div class="formula grd" role="group" aria-label="Definition of the Growth Rate Differential">
+      <span class="chip total">GRD</span>
+      <span class="eq" aria-hidden="true">=</span>
+      <span class="term"><span class="chip old">55&ndash;64</span> income growth</span>
+      <span class="grp"><span class="eq" aria-hidden="true">&minus;</span>
+      <span class="term"><span class="chip young">25&ndash;34</span> income growth</span></span>
+    </div>
+    <p class="same">Income growth is the change in average income between the two chosen periods, as a percentage of initial income, per year. GRD stands for Growth Rate Differential and is measured in percentage points per year.</p>
+    <div class="formula grd sum" role="group" aria-label="The GRD is the sum of five margins">
+      <span class="chip total">GRD</span>
+      <span class="eq" aria-hidden="true">=</span>
+      <span class="mchip m1">Wages</span>
+      <span class="grp"><span class="eq" aria-hidden="true">+</span><span class="mchip m2">Employment</span></span>
+      <span class="grp"><span class="eq" aria-hidden="true">+</span><span class="mchip m3">Transfer income</span></span>
+      <span class="grp"><span class="eq" aria-hidden="true">+</span><span class="mchip m4">Transfer share</span></span>
+      <span class="grp"><span class="eq" aria-hidden="true">+</span><span class="mchip m5">Other income</span></span>
+    </div>
+    <p class="note">A positive GRD means the gap in favour of the old is widening (the Age Group Income Ratio rises by roughly that many per cent per year); a negative one means it is narrowing. The dark marker in the chart is the total GRD; each coloured bar is one margin&rsquo;s contribution, for the old minus the young:</p>
     <ul class="note margins">
       <li><span class="mchip m1">Wages</span> change in net labour income of those in employment (holding the share employed at its final level).</li>
       <li><span class="mchip m2">Employment</span> change in the employment rate, valued at the initial labour income of those in employment.</li>

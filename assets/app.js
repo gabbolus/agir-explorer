@@ -138,7 +138,7 @@
   const $ = id => document.getElementById(id);
   const fmt = (x, d = 2) => (!isFinite(x) ? "–" : Math.abs(x) < 0.5 * 10 ** -d ? (0).toFixed(d) : (x > 0 ? "+" : "") + x.toFixed(d));
   // break long hover text into lines of ~70 characters
-  const wrap = t => t.replace(/(.{1,70})(\s|$)/g, "$1<br>").replace(/<br>$/, "");
+  const wrap = (t, n = isNarrow() ? 30 : 70) => t.replace(new RegExp(`(.{1,${n}})(\\s|$)`, "g"), "$1<br>").replace(/<br>$/, "");
   const label = (ptype, t) => (ptype === "wave" ? WAVES[t] : String(t));
   function hexA(hex, a) {
     const h = hex.replace("#", ""), n = parseInt(h, 16);
@@ -222,7 +222,7 @@
       traces.push({ x: xs(s), y: s.map(d => d.v + 1.96 * d.se), mode: "lines", line: { width: 0 }, hoverinfo: "skip", showlegend: false });
       traces.push({ x: xs(s), y: s.map(d => d.v - 1.96 * d.se), mode: "lines", line: { width: 0 }, fill: "tonexty",
         fillcolor: hexA(c, 0.15), hoverinfo: "skip", showlegend: false });
-      const impTxt = d => d.imp.length ? `<br><i>partially imputed: ${d.imp.length} of ${d.n} carried forward</i><br>(${d.imp.join(", ")})` : "";
+      const impTxt = d => d.imp.length ? `<br>${wrap(`partially imputed: ${d.imp.length} of ${d.n} carried forward (${d.imp.join(", ")})`)}` : "";
       traces.push({ x: xs(s), y: s.map(d => d.v), name: `${g} average`, mode: "lines+markers",
         line: { color: c, width: 2, dash },
         marker: { size: 9, symbol: s.map(d => d.imp.length ? `${sym}-open` : sym), color: c,

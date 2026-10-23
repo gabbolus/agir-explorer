@@ -193,7 +193,9 @@ th[scope="row"] { color: var(--text-primary); font-weight: 400; text-align: left
 .legend .dia { width: 10px; height: 10px; background: var(--total); transform: rotate(45deg); display: inline-block; margin: 0 1px; }
 
 /* margin names coloured as in the chart */
-.mchip { display: inline-block; padding: 0 8px; border-radius: 6px; font-weight: 700; color: #000; background: var(--c); }
+.mchip { display: inline-block; padding: 0 8px; border-radius: 6px; font-weight: 700; color: var(--text-primary);
+  background: var(--surface-0); background: color-mix(in srgb, var(--c) 16%, var(--surface-1)); border: 2px solid var(--c); }
+.mchip::before { content: ""; display: inline-block; width: 10px; height: 10px; border-radius: 2px; background: var(--c); margin-right: 6px; }
 .mchip.m1 { --c: var(--series-1); } .mchip.m2 { --c: var(--series-2); } .mchip.m3 { --c: var(--series-3); }
 .mchip.m4 { --c: var(--series-4); } .mchip.m5 { --c: var(--series-5); }
 .note.margins li { margin: 6px 0; }
@@ -208,3 +210,19 @@ th[scope="row"] { color: var(--text-primary); font-weight: 400; text-align: left
   .table-wrap th:first-child { min-width: 0; }
   .table-wrap th, .table-wrap td { padding: 6px 6px; }
 }
+
+/* GRD formulas */
+.chip.total { color: var(--surface-1); background: var(--total); }
+.formula .chip.total { font-size: 22px; padding: 2px 14px; letter-spacing: 0.03em; }
+.card .same { margin: 0 0 14px; color: var(--text-secondary); font-style: italic; max-width: 820px; }
+.formula.grd { margin-top: 8px; }
+.formula.grd .term { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+.formula.sum { gap: 8px 8px; margin-bottom: 14px; }
+.formula.sum .eq { font-size: 20px; }
+.formula.sum .mchip { font-size: 14px; }
+@media (max-width: 600px) {
+  .formula .chip.total { font-size: 18px; padding: 2px 10px; }
+  .formula.grd { flex-wrap: wrap; }
+}
+.formula .grp { display: inline-flex; align-items: center; gap: 8px; flex-wrap: nowrap; white-space: nowrap; }
+.formula.grd .grp .term { flex-wrap: nowrap; }
