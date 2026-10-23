@@ -228,7 +228,7 @@
         marker: { size: 9, symbol: s.map(d => d.imp.length ? `${sym}-open` : sym), color: c,
           line: { color: s.map(d => d.imp.length ? c : css("--surface-1")), width: 2 } },
         customdata: s.map(d => [d.n]),
-        hovertemplate: `<b>${g} average</b><br>%{x}: %{y:.3f}<br>%{customdata[0]} countries<extra></extra>` });
+        hovertemplate: `<b>${g} average</b><br>%{x}: %{y:.3f}<extra></extra>` });
     });
     const cols = ["--series-3", "--series-4", "--series-5"];
     const syms = ["diamond", "triangle-up", "star"];
@@ -329,11 +329,11 @@
       type: "bar", orientation: "h", name: m.label, y: ys, x: all.map(r => r[m.key]),
       customdata: all.map((r, j) => [...span[j], fmt(r[m.key])]),
       marker: { color: css(m.color), line: { color: css("--surface-1"), width: 1 } },
-      hovertemplate: `<b>%{y}</b> (%{customdata[0]})<br>${m.label}: %{customdata[2]} pp/yr%{customdata[1]}<extra></extra>`
+      hovertemplate: `<b>%{y}</b><br>${m.label}: %{customdata[2]} pp/yr<extra></extra>`
     }));
     traces.push({ type: "scatter", mode: "markers", name: "Total (GRD)", y: ys, x: all.map(r => r.growth), customdata: all.map((r, j) => [...span[j], fmt(r.growth)]),
       marker: { symbol: "diamond", size: 10, color: css("--total"), line: { color: css("--surface-1"), width: 2 } },
-      hovertemplate: `<b>%{y}</b> (%{customdata[0]})<br>Total GRD: %{customdata[2]} pp/yr%{customdata[1]}<extra></extra>` });
+      hovertemplate: `<b>%{y}</b><br>Total GRD: %{customdata[2]} pp/yr<extra></extra>` });
     const lay = baseLayout();
     lay.barmode = "relative"; lay.bargap = 0.3;
     const narrow = isNarrow();
