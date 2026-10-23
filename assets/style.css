@@ -101,3 +101,6 @@ tr.group td { font-weight: 600; }
 
 .lede.ref { font-size: 14px; margin-top: -12px; }
 .viz-root a { color: var(--series-1); }
+
+.note.margins { margin: 0 0 10px; padding-left: 20px; }
+.note.margins li { margin: 2px 0; }
