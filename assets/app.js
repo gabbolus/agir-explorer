@@ -287,7 +287,7 @@
   let decompAnnounce = "";
   function renderDecomp() {
     const { ptype, from, to } = state;
-    $("decompTitle").textContent = `What drove the change, ${label(ptype, from)} to ${label(ptype, to)}`;
+    $("decompPeriod").textContent = `${label(ptype, from)} to ${label(ptype, to)}`;
     let list = countries.filter(c => state.group === "all" || groupOf(c) === state.group);
     const res = [], missing = [];
     if (from >= to) {
@@ -313,8 +313,8 @@
     const parts = avgs.slice().reverse().map(r => `${r.country} average: total ${fmt(r.growth)} percentage points per year (wages ${fmt(r.wage)}, employment ${fmt(r.employ)}, transfer income ${fmt(r.tr_inc)}, transfer share ${fmt(r.tr_share)}, other income ${fmt(r.other)}).`);
     const byG = res.slice().sort((a, b) => b.growth - a.growth);
     const ext = byG.length ? ` Among the ${byG.length} countries shown, the total ranges from ${fmt(byG[byG.length - 1].growth)} (${byG[byG.length - 1].country}) to ${fmt(byG[0].growth)} (${byG[0].country}).` : "";
-    $("decompSummary").textContent = `Bar chart of the annual growth rate differential between people aged 55 to 64 and 25 to 34, split into wages, employment, transfer income, transfer share and other income, in percentage points per year. Positive values widen the gap in favour of the old. ${parts.join(" ")}${ext} Use the Show table button for all values.`;
-    decompAnnounce = `${$("decompTitle").textContent}. ${parts.join(" ")}`;
+    $("decompSummary").textContent = `Bar chart, ${label(ptype, from)} to ${label(ptype, to)}, of the annual growth rate differential between people aged 55 to 64 and 25 to 34, split into wages, employment, transfer income, transfer share and other income, in percentage points per year. Positive values widen the gap in favour of the old. ${parts.join(" ")}${ext} Use the Show table button for all values.`;
+    decompAnnounce = `What drove the change, ${label(ptype, from)} to ${label(ptype, to)}. ${parts.join(" ")}`;
     const all = [...res, ...avgs];   // plotted bottom-to-top, so averages appear on top
     current = [...avgs.slice().reverse(), ...res.slice().reverse()];
     const yname = r => {   // on phones the label column is kept narrow so the bars get the room
