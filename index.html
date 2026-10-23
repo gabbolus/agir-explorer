@@ -6,13 +6,13 @@
   <meta name="color-scheme" content="light dark">
   <title>Age Group Income Ratio Explorer</title>
   <meta name="description" content="Age Group Income Ratio and the decomposition of its growth, from LIS microdata. Guaitoli and Pancrazi.">
-  <link rel="stylesheet" href="assets/style.css?v=20261024h">
+  <link rel="stylesheet" href="assets/style.css?v=20261024j">
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
-  <script src="data/agir_data.js?v=20261024h"></script>
+  <script src="data/agir_data.js?v=20261024j"></script>
 </head>
 <body>
 <div class="viz-root">
-  <a class="skip" href="#controls">Skip to the filters and charts</a>
+  <a class="skip" href="#tiles">Skip to the charts</a>
   <header class="page-head">
     <h1>Age Group Income Ratio Explorer</h1>
     <p class="lede">How does the income of people aged 55&ndash;64 compare with that of people aged 25&ndash;34? Explore 37 countries from 2004 to 2024, and see which sources of income drove the change.</p>
@@ -50,7 +50,11 @@
     <p class="scope"><strong>What is measured.</strong> All people in each age group, working or not. Income is labour income plus pensions and other transfers, net of income taxes. Capital income and wealth are not observed, so the gap is likely understated in high-income countries (a lower bound). Changes in surveys can also move the numbers; countries affected are marked &dagger;.</p>
   </section>
 
-  <section class="controls" id="controls" tabindex="-1" aria-label="Filters">
+
+  <section class="tiles" id="tiles" tabindex="-1" role="group" aria-label="Headline numbers"></section>
+
+  <p class="note ctl-note">Choose 3-year waves or single survey years, and the two periods to compare. These settings drive the headline numbers above, the chart below and the decomposition further down.</p>
+  <section class="controls" id="controls" tabindex="-1" aria-label="Period filters">
     <label>Periods
       <select id="ptype">
         <option value="wave" selected>3-year waves</option>
@@ -59,30 +63,7 @@
     </label>
     <label>From <select id="from"></select></label>
     <label>To <select id="to"></select></label>
-    <label>Endpoints
-      <select id="exact">
-        <option value="nearest" selected>Nearest available</option>
-        <option value="exact">Exact periods only</option>
-      </select>
-    </label>
-    <label>Countries
-      <select id="group">
-        <option value="all">All</option>
-        <option value="High-income">High-income (2004 GDP)</option>
-        <option value="Middle-income">Middle-income (2004 GDP)</option>
-      </select>
-    </label>
-    <label>Sort
-      <select id="sort">
-        <option value="grd">By total change</option>
-        <option value="name">Alphabetical</option>
-        <option value="emp">By employment margin</option>
-        <option value="wage">By wage margin</option>
-      </select>
-    </label>
   </section>
-
-  <section class="tiles" id="tiles" role="group" aria-label="Headline numbers"></section>
 
   <section class="card">
     <div class="card-head">
@@ -99,6 +80,31 @@
     <div id="agirChart" class="chart" role="img" aria-labelledby="agirTitle" aria-describedby="agirSummary"></div>
     <p id="agirSummary" class="sr-only"></p>
     <div id="agirTableWrap" class="table-wrap" hidden></div>
+  </section>
+
+  <p class="note ctl-note">Choose which countries to show in the decomposition and how to order them.</p>
+  <section class="controls" id="controls2" aria-label="Country filters">
+    <label>Countries
+      <select id="group">
+        <option value="all">All</option>
+        <option value="High-income">High-income (2004 GDP)</option>
+        <option value="Middle-income">Middle-income (2004 GDP)</option>
+      </select>
+    </label>
+    <label>Sort
+      <select id="sort">
+        <option value="grd">By total change</option>
+        <option value="name">Alphabetical</option>
+        <option value="emp">By employment margin</option>
+        <option value="wage">By wage margin</option>
+      </select>
+    </label>
+    <label>Endpoints
+      <select id="exact">
+        <option value="nearest" selected>Nearest available</option>
+        <option value="exact">Exact periods only</option>
+      </select>
+    </label>
   </section>
 
   <section class="card">
@@ -191,6 +197,6 @@
   <div id="noteTip" class="tip" role="tooltip" hidden></div>
   <footer class="foot">Data: Luxembourg Income Study (LIS) Database, (multiple countries; microdata runs completed on 22 October 2026). Luxembourg: LIS. All figures are aggregates computed by the authors.</footer>
 </div>
-<script src="assets/app.js?v=20261024h"></script>
+<script src="assets/app.js?v=20261024j"></script>
 </body>
 </html>
