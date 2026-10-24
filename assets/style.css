@@ -260,3 +260,8 @@ th[scope="row"] { color: var(--text-primary); font-weight: 400; text-align: left
 /* controls sitting inside a card */
 .card .controls { background: none; border: 0; border-radius: 0; padding: 0; margin: 8px 0 10px; }
 .ctl-after { margin: 0 0 8px; }
+
+/* checkbox control */
+.controls label.check { flex-direction: row; align-items: center; gap: 8px; min-height: 34px; font-size: 14px; color: var(--text-primary); cursor: pointer; }
+.controls label.check input { width: 18px; height: 18px; margin: 0; accent-color: var(--link); }
+@media (max-width: 700px) { .controls label.check { min-height: 44px; flex: 1 1 100%; } }

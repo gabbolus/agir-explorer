@@ -169,7 +169,7 @@
   }
 
   // --------------------------------------------------------------- state ----
-  const state = { ptype: "wave", from: 1, to: 7, group: "all", sort: "grd", cmp: ["", "", ""], table: false, agirTable: false, exact: false };
+  const state = { ptype: "wave", from: 1, to: 7, group: "all", sort: "grd", cmp: ["", "", ""], table: false, agirTable: false, exact: false, showGroups: true };
 
   function periodsAvailable(ptype) {
     const s = new Set();
@@ -214,7 +214,7 @@
     const traces = [], summ = [], tbl = [], impAll = {};
     const xs = d => d.map(p => (state.ptype === "wave" ? WAVES[p.t] : p.t));
     // each line has its own marker shape; filled = observed, open = partially imputed
-    [["High-income", "--series-1", "solid", "circle"], ["Middle-income", "--series-2", "dash", "square"]].forEach(([g, col, dash, sym]) => {
+    (state.showGroups ? [["High-income", "--series-1", "solid", "circle"], ["Middle-income", "--series-2", "dash", "square"]] : []).forEach(([g, col, dash, sym]) => {
       const s = groupSeries(countries.filter(c => groupOf(c) === g && !CAVEAT[c]), state.ptype);
       const c = css(col);
       tbl.push({ name: `${g} average`, pts: s.map(d => ({ t: d.t, v: d.v, ci: 1.96 * d.se, imp: d.imp.length > 0 })) });
@@ -258,15 +258,22 @@
     lay.shapes = [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: 1, y1: 1, line: { color: css("--text-muted"), width: 1, dash: "dot" } }];
     lay.hovermode = "x unified";
     if (isNarrow()) { lay.margin.r = 24; lay.margin.b = 64; lay.xaxis.automargin = true; lay.xaxis.tickangle = -40; lay.xaxis.tickfont = { size: 12, color: css("--text-secondary") }; }
-    Plotly.react("agirChart", traces, lay, CONFIG);
+    const chartEl = $("agirChart");
+    if (!traces.length) {
+      Plotly.purge("agirChart");
+      chartEl.innerHTML = `<p class="note empty-msg">Nothing to show: tick &ldquo;Show country-group averages&rdquo; or choose a country to compare.</p>`;
+    } else {
+      if (chartEl.querySelector(".empty-msg")) chartEl.innerHTML = "";
+      Plotly.react("agirChart", traces, lay, CONFIG);
+    }
     $("agirSummary").textContent = "Line chart of the Age Group Income Ratio, 55 to 64 year-olds over 25 to 34 year-olds, by period. A value above 1 means older people have the higher average income. " + summ.join(" ");
     agirTbl = tbl; renderAgirTable();
     const how = "<strong>Partially imputed values.</strong> Group averages keep every country in every period: when a country has no survey in a period, its latest available Age Group Income Ratio is carried forward. " +
       ["High-income", "Middle-income"].filter(g => impAll[g] && impAll[g].length).map(g => `<br><strong>${g}, carried forward in at least one period:</strong> ${impAll[g].join(", ")}.`).join("") + "<br>" +
       (state.ptype === "year" ? "With single years, many values are carried forward between surveys, so waves are more reliable. " : "") +
       "South Africa is not in the group averages. Country lines show observed values only.";
-    $("agirNote").innerHTML = "Filled markers are observed values; hollow markers include carried-forward values. Shaded bands (group averages) and vertical lines (countries) are 95% confidence intervals. Dotted line: equal incomes." +
-      `<button type="button" class="imp-btn inline" aria-expanded="false" aria-controls="imp-agir" aria-label="How group averages are built: show details"><span aria-hidden="true">i</span></button><div class="imp-pop" id="imp-agir" role="note" hidden>${how}</div>` +
+    $("agirNote").innerHTML = (state.showGroups ? "Filled markers are observed values; hollow markers include carried-forward values. Shaded bands (group averages) and vertical lines (countries) are 95% confidence intervals. Dotted line: equal incomes." : "Vertical lines are 95% confidence intervals. Dotted line: equal incomes.") +
+      (state.showGroups ? `<button type="button" class="imp-btn inline" aria-expanded="false" aria-controls="imp-agir" aria-label="How group averages are built: show details"><span aria-hidden="true">i</span></button><div class="imp-pop" id="imp-agir" role="note" hidden>${how}</div>` : "") +
       (noData.length ? `<br><strong>No data</strong> (no marker; the line only joins observed surveys, nothing is imputed): ${noData.join("; ")}.` : "") +
       state.cmp.filter(c => c && NOTES[c]).map(c => `<br><strong>${c}${NOTE_MARK}</strong> ${noteText(c)}`).join("");
   }
@@ -432,6 +439,10 @@
   $("sort").addEventListener("change", e => { state.sort = e.target.value; renderDecomp(); announce(decompAnnounce); });
   ["c1", "c2", "c3"].forEach((id, i) => $(id).addEventListener("change", e => { state.cmp[i] = e.target.value; renderAgir(); announce("Comparison updated: " + (state.cmp.filter(Boolean).join(", ") || "no countries selected") + "."); }));
   $("toggleTable").addEventListener("click", () => { state.table = !state.table; renderTable(); });
+  $("showGroups").addEventListener("change", e => {
+    state.showGroups = e.target.checked; renderAgir();
+    announce(state.showGroups ? "Country-group averages shown." : "Country-group averages hidden.");
+  });
   $("toggleAgirTable").addEventListener("click", () => { state.agirTable = !state.agirTable; renderAgirTable(); });
   $("download").addEventListener("click", download);
   // small "i" button on a tile opens/closes the imputation note (click outside or Escape closes it)
