@@ -169,7 +169,7 @@
   }
 
   // --------------------------------------------------------------- state ----
-  const state = { ptype: "wave", from: 1, to: 7, group: "all", sort: "grd", cmp: ["", "", ""], table: false, agirTable: false, exact: false, showGroups: true };
+  const state = { ptype: "wave", from: 1, to: 7, group: "all", sort: "grd", cmp: [], grp: { "High-income": true, "Middle-income": true }, table: false, agirTable: false, exact: false };
 
   function periodsAvailable(ptype) {
     const s = new Set();
@@ -185,9 +185,106 @@
       $(id).value = state[id];
     }
   }
-  function fillCountries() {
-    const opts = `<option value="">—</option>` + countries.map(c => `<option>${c}</option>`).join("");
-    ["c1", "c2", "c3"].forEach((id, i) => { $(id).innerHTML = opts; $(id).value = state.cmp[i]; });
+  // ---- line picker: any mix of the two group averages and up to MAXC countries
+  const MAXC = 6;
+  const SLOT_COL = ["--series-3", "--series-4", "--series-5", "--series-6", "--series-7", "--series-8"];
+  const SLOT_SYM = ["diamond", "triangle-up", "star", "pentagon", "triangle-down", "hexagon"];
+  const GROUPS = [["High-income", "--series-1"], ["Middle-income", "--series-2"]];
+  const slotOf = {};
+  const anyGroup = () => state.grp["High-income"] || state.grp["Middle-income"];
+  function setCountry(c, on) {
+    const i = state.cmp.indexOf(c);
+    if (on && i < 0) {
+      if (state.cmp.length >= MAXC) return false;
+      const used = new Set(state.cmp.map(x => slotOf[x]));
+      let s = 0; while (used.has(s)) s++;
+      slotOf[c] = s; state.cmp.push(c);
+    }
+    if (!on && i >= 0) { state.cmp.splice(i, 1); delete slotOf[c]; }
+    return true;
+  }
+  function lineLabel() {
+    const ng = Object.values(state.grp).filter(Boolean).length;
+    return `Choose lines \u00b7 ${ng + state.cmp.length}`;
+  }
+  function buildPicker() {
+    const row = (key, text, extra = "") => `<label class="prow" data-key="${key}" data-name="${text.toLowerCase()}"><input type="checkbox" value="${key}"><span class="sw" aria-hidden="true"></span><span class="nm">${text}</span>${extra}</label>`;
+    const sect = (title, items) => `<div class="p-sec" role="group" aria-label="${title}"><h3>${title}</h3>${items}</div>`;
+    const cl = g => countries.filter(c => groupOf(c) === g);
+    $("pickList").innerHTML =
+      sect("Group averages", GROUPS.map(([g]) => row("G:" + g, g + " average")).join("")) +
+      GROUPS.map(([g]) => sect(`${g} countries`, cl(g).map(c => row("C:" + c, withMark(c))).join(""))).join("") +
+      `<p class="p-empty" id="pickEmpty" hidden>No country matches your search.</p>`;
+  }
+  function syncPicker() {
+    const full = state.cmp.length >= MAXC;
+    document.querySelectorAll("#pickList .prow").forEach(r => {
+      const key = r.dataset.key, cb = r.querySelector("input");
+      let on, col = null;
+      if (key.startsWith("G:")) { const g = key.slice(2); on = state.grp[g]; col = GROUPS.find(x => x[0] === g)[1]; }
+      else { const c = key.slice(2); on = state.cmp.includes(c); if (on) col = SLOT_COL[slotOf[c]]; }
+      cb.checked = !!on;
+      cb.disabled = !on && key.startsWith("C:") && full;
+      r.classList.toggle("off", cb.disabled);
+      r.style.setProperty("--sw", col ? `var(${col})` : "transparent");
+    });
+    $("pickLabel").textContent = lineLabel();
+    $("pickCount").textContent = `${state.cmp.length} of ${MAXC} countries` + (full ? ": untick one to add another." : ".");
+    const chips = [];
+    GROUPS.forEach(([g, col]) => { if (state.grp[g]) chips.push([`G:${g}`, `${g} average`, col]); });
+    state.cmp.forEach(c => chips.push([`C:${c}`, withMark(c), SLOT_COL[slotOf[c]]]));
+    $("selChips").innerHTML = chips.length
+      ? chips.map(([k, t, col]) => `<li><button type="button" class="chip-x" data-key="${k}" aria-label="Remove ${t.replace(NOTE_MARK, "")} from the chart"><span class="sw" style="background:var(${col})" aria-hidden="true"></span>${t}<span class="x" aria-hidden="true">&times;</span></button></li>`).join("")
+      : `<li class="none">No lines selected.</li>`;
+  }
+  function togglePick(key, on) {
+    let ok = true, name;
+    if (key.startsWith("G:")) { name = key.slice(2) + " average"; state.grp[key.slice(2)] = on; }
+    else { name = key.slice(2); ok = setCountry(name, on); }
+    syncPicker();
+    if (!ok) { announce(`Maximum of ${MAXC} countries. Untick one to add another.`); return; }
+    renderAgir();
+    announce(`${name} ${on ? "added to" : "removed from"} the chart. ${state.cmp.length} countries and ${Object.values(state.grp).filter(Boolean).length} averages shown.`);
+  }
+  function openPicker(open) {
+    const p = $("pickPanel");
+    p.hidden = !open; $("pickBackdrop").hidden = !open || !isNarrow();
+    $("pickBtn").setAttribute("aria-expanded", String(open));
+    document.documentElement.classList.toggle("sheet-open", open && isNarrow());
+    if (open) { p.focus({ preventScroll: true }); }
+    else { $("pickSearch").value = ""; filterPicker(); }
+  }
+  function filterPicker() {
+    const q = $("pickSearch").value.trim().toLowerCase();
+    let shown = 0;
+    document.querySelectorAll("#pickList .prow").forEach(r => {
+      const hit = !q || r.dataset.name.includes(q);
+      r.hidden = !hit;
+      if (hit && r.dataset.key.startsWith("C:")) shown++;
+    });
+    document.querySelectorAll("#pickList .p-sec").forEach(s => { s.hidden = ![...s.querySelectorAll(".prow")].some(r => !r.hidden); });
+    $("pickEmpty").hidden = !q || shown > 0;
+  }
+  function wirePicker() {
+    buildPicker(); syncPicker();
+    $("pickBtn").addEventListener("click", () => openPicker($("pickPanel").hidden));
+    $("pickDone").addEventListener("click", () => { openPicker(false); $("pickBtn").focus(); });
+    $("pickBackdrop").addEventListener("click", () => openPicker(false));
+    $("pickSearch").addEventListener("input", filterPicker);
+    $("pickClear").addEventListener("click", () => {
+      GROUPS.forEach(([g]) => { state.grp[g] = false; });
+      state.cmp.slice().forEach(c => setCountry(c, false));
+      syncPicker(); renderAgir(); announce("All lines removed from the chart.");
+    });
+    $("pickList").addEventListener("change", e => { if (e.target.matches("input")) togglePick(e.target.value, e.target.checked); });
+    $("selChips").addEventListener("click", e => {
+      const b = e.target.closest(".chip-x"); if (!b) return;
+      const next = b.closest("li").nextElementSibling || b.closest("li").previousElementSibling;
+      togglePick(b.dataset.key, false);
+      const f = next && next.querySelector(".chip-x"); (f || $("pickBtn")).focus();
+    });
+    document.addEventListener("click", e => { if (!$("pickPanel").hidden && !isNarrow() && !e.target.closest("#picker")) openPicker(false); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("pickPanel").hidden) { openPicker(false); $("pickBtn").focus(); } });
   }
 
   // --------------------------------------------------------------- tiles ----
@@ -214,7 +311,7 @@
     const traces = [], summ = [], tbl = [], impAll = {};
     const xs = d => d.map(p => (state.ptype === "wave" ? WAVES[p.t] : p.t));
     // each line has its own marker shape; filled = observed, open = partially imputed
-    (state.showGroups ? [["High-income", "--series-1", "solid", "circle"], ["Middle-income", "--series-2", "dash", "square"]] : []).forEach(([g, col, dash, sym]) => {
+    [["High-income", "--series-1", "solid", "circle"], ["Middle-income", "--series-2", "dash", "square"]].filter(x => state.grp[x[0]]).forEach(([g, col, dash, sym]) => {
       const s = groupSeries(countries.filter(c => groupOf(c) === g && !CAVEAT[c]), state.ptype);
       const c = css(col);
       tbl.push({ name: `${g} average`, pts: s.map(d => ({ t: d.t, v: d.v, ci: 1.96 * d.se, imp: d.imp.length > 0 })) });
@@ -230,13 +327,12 @@
         customdata: s.map(d => [d.n]),
         hovertemplate: `<b>${g} average</b><br>%{x}: %{y:.3f}<extra></extra>` });
     });
-    const cols = ["--series-3", "--series-4", "--series-5"];
-    const syms = ["diamond", "triangle-up", "star"];
+    const cols = SLOT_COL, syms = SLOT_SYM;
     // country lines: observed values only. The line joins the observed surveys; missing
     // periods have no marker or value and are listed as "no data" - never imputed.
     const grid = periodsAvailable(state.ptype), noData = [];
-    state.cmp.forEach((c, i) => {
-      if (!c) return;
+    state.cmp.forEach(c => {
+      const i = slotOf[c];
       const obs = {};
       agirSeries(c, state.ptype).forEach(d => { obs[d.t] = d; });
       const col = css(cols[i]);
@@ -261,7 +357,7 @@
     const chartEl = $("agirChart");
     if (!traces.length) {
       Plotly.purge("agirChart");
-      chartEl.innerHTML = `<p class="note empty-msg">Nothing to show: tick &ldquo;Show country-group averages&rdquo; or choose a country to compare.</p>`;
+      chartEl.innerHTML = `<p class="note empty-msg">Nothing to show: open &ldquo;Choose lines&rdquo; and tick a group average or a country.</p>`;
     } else {
       if (chartEl.querySelector(".empty-msg")) chartEl.innerHTML = "";
       Plotly.react("agirChart", traces, lay, CONFIG);
@@ -272,8 +368,8 @@
       ["High-income", "Middle-income"].filter(g => impAll[g] && impAll[g].length).map(g => `<br><strong>${g}, carried forward in at least one period:</strong> ${impAll[g].join(", ")}.`).join("") + "<br>" +
       (state.ptype === "year" ? "With single years, many values are carried forward between surveys, so waves are more reliable. " : "") +
       "South Africa is not in the group averages. Country lines show observed values only.";
-    $("agirNote").innerHTML = (state.showGroups ? "Filled markers are observed values; hollow markers include carried-forward values. Shaded bands (group averages) and vertical lines (countries) are 95% confidence intervals. Dotted line: equal incomes." : "Vertical lines are 95% confidence intervals. Dotted line: equal incomes.") +
-      (state.showGroups ? `<button type="button" class="imp-btn inline" aria-expanded="false" aria-controls="imp-agir" aria-label="How group averages are built: show details"><span aria-hidden="true">i</span></button><div class="imp-pop" id="imp-agir" role="note" hidden>${how}</div>` : "") +
+    $("agirNote").innerHTML = (anyGroup() ? "Filled markers are observed values; hollow markers include carried-forward values. Shaded bands (group averages) and vertical lines (countries) are 95% confidence intervals. Dotted line: equal incomes." : "Vertical lines are 95% confidence intervals. Dotted line: equal incomes.") +
+      (anyGroup() ? `<button type="button" class="imp-btn inline" aria-expanded="false" aria-controls="imp-agir" aria-label="How group averages are built: show details"><span aria-hidden="true">i</span></button><div class="imp-pop" id="imp-agir" role="note" hidden>${how}</div>` : "") +
       (noData.length ? `<br><strong>No data</strong> (no marker; the line only joins observed surveys, nothing is imputed): ${noData.join("; ")}.` : "") +
       state.cmp.filter(c => c && NOTES[c]).map(c => `<br><strong>${c}${NOTE_MARK}</strong> ${noteText(c)}`).join("");
   }
@@ -437,12 +533,7 @@
   $("to").addEventListener("change", e => { state.to = +e.target.value; renderTiles(); renderDecomp(); announce(decompAnnounce); });
   $("group").addEventListener("change", e => { state.group = e.target.value; renderDecomp(); announce(decompAnnounce); });
   $("sort").addEventListener("change", e => { state.sort = e.target.value; renderDecomp(); announce(decompAnnounce); });
-  ["c1", "c2", "c3"].forEach((id, i) => $(id).addEventListener("change", e => { state.cmp[i] = e.target.value; renderAgir(); announce("Comparison updated: " + (state.cmp.filter(Boolean).join(", ") || "no countries selected") + "."); }));
   $("toggleTable").addEventListener("click", () => { state.table = !state.table; renderTable(); });
-  $("showGroups").addEventListener("change", e => {
-    state.showGroups = e.target.checked; renderAgir();
-    announce(state.showGroups ? "Country-group averages shown." : "Country-group averages hidden.");
-  });
   $("toggleAgirTable").addEventListener("click", () => { state.agirTable = !state.agirTable; renderAgirTable(); });
   $("download").addEventListener("click", download);
   // small "i" button on a tile opens/closes the imputation note (click outside or Escape closes it)
@@ -488,5 +579,5 @@
 
   $("countryNotes").innerHTML = Object.keys(NOTES).sort().map(c =>
     `<p><strong>${c}${NOTE_MARK}</strong> ${noteText(c)}</p>`).join("");
-  fillPeriods(); fillCountries(); renderAll();
+  fillPeriods(); wirePicker(); renderAll();
 })();

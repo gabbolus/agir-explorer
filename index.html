@@ -6,9 +6,9 @@
   <meta name="color-scheme" content="light dark">
   <title>Age Group Income Ratio Explorer</title>
   <meta name="description" content="Age Group Income Ratio and the decomposition of its growth, from LIS microdata. Guaitoli and Pancrazi.">
-  <link rel="stylesheet" href="assets/style.css?v=20261024m">
+  <link rel="stylesheet" href="assets/style.css?v=20261024n">
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
-  <script src="data/agir_data.js?v=20261024m"></script>
+  <script src="data/agir_data.js?v=20261024n"></script>
 </head>
 <body>
 <div class="viz-root">
@@ -57,14 +57,23 @@
   <section class="card">
     <div class="card-head">
       <h2 id="agirTitle">Age Group Income Ratio over time</h2>
-      <div class="btns cmp" role="group" aria-label="Compare countries">
-        <span class="cmp-label">Compare</span>
-        <select id="c1" aria-label="Compare country 1"></select>
-        <select id="c2" aria-label="Compare country 2"></select>
-        <select id="c3" aria-label="Compare country 3"></select>
+      <div class="btns cmp">
+        <div class="picker" id="picker">
+          <button id="pickBtn" type="button" aria-haspopup="dialog" aria-expanded="false" aria-controls="pickPanel"><span id="pickLabel">Choose lines</span><span class="caret" aria-hidden="true">&#9662;</span></button>
+          <div class="backdrop" id="pickBackdrop" hidden></div>
+          <div class="panel" id="pickPanel" role="dialog" aria-label="Choose which lines to show" tabindex="-1" hidden>
+            <div class="p-head">
+              <input type="search" id="pickSearch" placeholder="Search countries" aria-label="Search countries" autocomplete="off">
+              <button id="pickClear" type="button">Clear all</button>
+            </div>
+            <div class="p-body" id="pickList"></div>
+            <div class="p-foot"><span id="pickCount" aria-live="polite"></span><button id="pickDone" type="button" class="primary">Done</button></div>
+          </div>
+        </div>
         <button id="toggleAgirTable" type="button" aria-expanded="false" aria-controls="agirTableWrap">Show table</button>
       </div>
     </div>
+    <ul class="chips" id="selChips" aria-label="Lines shown on the chart"></ul>
   <section class="controls" id="controls" tabindex="-1" aria-label="Period filters">
     <label>Periods
       <select id="ptype">
@@ -74,7 +83,6 @@
     </label>
     <label>From <select id="from"></select></label>
     <label>To <select id="to"></select></label>
-    <label class="check"><input type="checkbox" id="showGroups" checked> Show country-group averages</label>
   </section>
     <p class="note ctl-after">From and To also set the headline numbers above and the decomposition further down.</p>
     <div class="note" id="agirNote"></div>
@@ -193,6 +201,6 @@
   <div id="noteTip" class="tip" role="tooltip" hidden></div>
   <footer class="foot">Data: Luxembourg Income Study (LIS) Database, (multiple countries; microdata runs completed on 22 October 2026). Luxembourg: LIS. All figures are aggregates computed by the authors.</footer>
 </div>
-<script src="assets/app.js?v=20261024m"></script>
+<script src="assets/app.js?v=20261024n"></script>
 </body>
 </html>
