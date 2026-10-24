@@ -231,10 +231,10 @@
     $("pickLabel").textContent = lineLabel();
     $("pickCount").textContent = `${state.cmp.length} of ${MAXC} countries` + (full ? ": untick one to add another." : ".");
     const chips = [];
-    GROUPS.forEach(([g, col]) => { if (state.grp[g]) chips.push([`G:${g}`, `${g} average`, col]); });
+    GROUPS.forEach(([g, col]) => { if (state.grp[g]) chips.push([`G:${g}`, `${g} average`, col, `${g} avg`]); });
     state.cmp.forEach(c => chips.push([`C:${c}`, withMark(c), SLOT_COL[slotOf[c]]]));
     $("selChips").innerHTML = chips.length
-      ? chips.map(([k, t, col]) => `<li><button type="button" class="chip-x" data-key="${k}" aria-label="Remove ${t.replace(NOTE_MARK, "")} from the chart"><span class="sw" style="background:var(${col})" aria-hidden="true"></span>${t}<span class="x" aria-hidden="true">&times;</span></button></li>`).join("")
+      ? chips.map(([k, t, col, short]) => `<li><button type="button" class="chip-x" data-key="${k}" aria-label="Remove ${t.replace(NOTE_MARK, "")} from the chart"><span class="sw" style="background:var(${col})" aria-hidden="true"></span>${short ? `<span class="full">${t}</span><span class="short" aria-hidden="true">${short}</span>` : t}<span class="x" aria-hidden="true">&times;</span></button></li>`).join("")
       : `<li class="none">No lines selected.</li>`;
   }
   function togglePick(key, on) {
@@ -368,10 +368,49 @@
       ["High-income", "Middle-income"].filter(g => impAll[g] && impAll[g].length).map(g => `<br><strong>${g}, carried forward in at least one period:</strong> ${impAll[g].join(", ")}.`).join("") + "<br>" +
       (state.ptype === "year" ? "With single years, many values are carried forward between surveys, so waves are more reliable. " : "") +
       "South Africa is not in the group averages. Country lines show observed values only.";
-    $("agirNote").innerHTML = (anyGroup() ? "Filled markers are observed values; hollow markers include carried-forward values. Shaded bands (group averages) and vertical lines (countries) are 95% confidence intervals. Dotted line: equal incomes." : "Vertical lines are 95% confidence intervals. Dotted line: equal incomes.") +
-      (anyGroup() ? `<button type="button" class="imp-btn inline" aria-expanded="false" aria-controls="imp-agir" aria-label="How group averages are built: show details"><span aria-hidden="true">i</span></button><div class="imp-pop" id="imp-agir" role="note" hidden>${how}</div>` : "") +
-      (noData.length ? `<br><strong>No data</strong> (no marker; the line only joins observed surveys, nothing is imputed): ${noData.join("; ")}.` : "") +
-      state.cmp.filter(c => c && NOTES[c]).map(c => `<br><strong>${c}${NOTE_MARK}</strong> ${noteText(c)}`).join("");
+    const readMe = "<strong>How to read the chart.</strong> The dotted line marks equal incomes (ratio of 1). Vertical lines on countries" + (anyGroup() ? " and shaded bands on group averages" : "") + " are 95% confidence intervals." +
+      (anyGroup() ? " Filled markers are observed values; hollow markers include carried-forward values." : "") +
+      " A country line joins the surveys we observe; a period without a survey has no marker and nothing is imputed." +
+      "<br><strong>From and To</strong> also set the headline numbers above and the decomposition further down.";
+    const groupNote = anyGroup() ? "<br>" + how : "";
+    const cnotes = state.cmp.filter(c => NOTES[c]).map(c => `<br><strong>${c}${NOTE_MARK}</strong> ${noteText(c)}`).join("");
+    $("agirNote").innerHTML = `<button type="button" class="imp-btn inline pill" aria-expanded="false" aria-controls="imp-agir"><span class="i" aria-hidden="true">i</span>Notes</button>` +
+      `<div class="imp-pop" id="imp-agir" role="note" hidden>${readMe}${groupNote}${cnotes}</div>`;
+    renderReadLine();
+  }
+
+  // ---- "What the line says": plain-language reading of one or two country lines
+  const SHAPES = {
+    "diamond": "6,0 12,6 6,12 0,6", "triangle-up": "6,0.5 12,11.5 0,11.5", "triangle-down": "0,0.5 12,0.5 6,11.5",
+    "pentagon": "6,0 11.7,4.4 9.5,11.2 2.5,11.2 0.3,4.4", "hexagon": "3,0.5 9,0.5 12,6 9,11.5 3,11.5 0,6",
+    "star": "6,0 7.5,4.2 12,4.4 8.5,7.2 9.7,11.6 6,9 2.3,11.6 3.5,7.2 0,4.4 4.5,4.2" };
+  const mark = (sym, col) => `<svg class="mk" viewBox="0 0 12 12" width="18" height="18" aria-hidden="true"><polygon points="${SHAPES[sym]}" fill="var(${col})"/></svg>`;
+  const pct = v => Math.round(100 * (v - 1));
+  const gapWords = (v, than = true) => { const p = pct(v); return p === 0 ? "about the same" + (than ? " as" : "") : `${Math.abs(p)}% ${p > 0 ? "higher" : "lower"}` + (than ? " than" : ""); };
+  function renderReadLine() {
+    const sec = $("readLine");
+    if (state.cmp.length < 1 || state.cmp.length > 2) { sec.hidden = true; return; }
+    sec.hidden = false;
+    const old = `<span class="chip old">55&ndash;64</span>`, young = `<span class="chip young">25&ndash;34</span>`;
+    $("readLineBody").innerHTML = state.cmp.map(c => {
+      const col = SLOT_COL[slotOf[c]], sym = SLOT_SYM[slotOf[c]];
+      const obs = agirSeries(c, state.ptype).filter(d => d.t >= state.from && d.t <= state.to);
+      const head = `<header>${mark(sym, col)}<h3>${withMark(c)}</h3></header>`;
+      if (!obs.length) return `<article class="lc" style="--lc:var(${col})">${head}<p>No survey for this country between ${label(state.ptype, state.from)} and ${label(state.ptype, state.to)}.</p></article>`;
+      const a = obs[0], z = obs[obs.length - 1];
+      const fig = (d, when) => `<div class="fig"><div class="yr">${label(state.ptype, d.t)}</div><div class="big">${d.v.toFixed(2)}</div><div class="sub">AGIR</div></div>`;
+      const edge = (d, want) => d.t !== want ? ` <span class="edge">(${want === state.from ? "first" : "last"} survey in the selected range)</span>` : "";
+      let body, delta = "";
+      if (a === z) {
+        body = `<p>In <strong>${c}</strong>, the average income of ${old} year-olds was <strong>${gapWords(a.v)}</strong> that of ${young} year-olds in ${label(state.ptype, a.t)}. That is the only survey in the selected range.</p>`;
+        return `<article class="lc" style="--lc:var(${col})">${head}<div class="pair">${fig(a)}</div>${body}</article>`;
+      }
+      const dp = Math.round(100 * (z.v - a.v));
+      delta = dp === 0 ? "The figure is unchanged." : `A change of <strong>${dp > 0 ? "+" : "\u2212"}${Math.abs(dp)} percentage points</strong> since ${label(state.ptype, a.t)}.`;
+      return `<article class="lc" style="--lc:var(${col})">${head}<div class="pair">${fig(a)}<span class="arrow" aria-hidden="true">&rarr;</span>${fig(z)}</div>` +
+        `<p>In <strong>${c}</strong>, the average income of ${old} year-olds was <strong>${gapWords(a.v)}</strong> that of ${young} year-olds in ${label(state.ptype, a.t)}${edge(a, state.from)}. ` +
+        `In ${label(state.ptype, z.t)}${edge(z, state.to)} it was <strong>${gapWords(z.v, false)}</strong>. ${delta}</p></article>`;
+    }).join("");
   }
 
   function renderAgirTable() {

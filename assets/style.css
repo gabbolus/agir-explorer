@@ -175,9 +175,13 @@ th[scope="row"] { color: var(--text-primary); font-weight: 400; text-align: left
 .imp-pop { position: absolute; z-index: 5; left: 10px; right: 10px; top: 44px; background: var(--surface-1); color: var(--text-secondary);
   border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-size: 14px; box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18); }
 .imp-pop strong { color: var(--text-primary); }
-#agirNote { position: relative; }
 .imp-btn.inline { position: relative; top: auto; right: auto; display: inline-flex; vertical-align: middle; margin-left: 8px; width: 24px; height: 24px; font-size: 13px; }
-#agirNote .imp-pop { top: calc(100% + 4px); left: 0; right: 0; }
+.chiprow { position: relative; display: flex; align-items: flex-start; gap: 8px; margin: 4px 0 10px; }
+.chiprow .chips { flex: 1 1 auto; margin: 0; min-width: 0; }
+#agirNote { flex: none; }
+#agirNote .imp-pop { top: calc(100% + 4px); left: 0; right: 0; max-height: 60vh; overflow-y: auto; }
+.imp-btn.pill { width: auto; height: 36px; padding: 0 12px; border-radius: 999px; gap: 6px; margin: 0; font: 600 14px/1 system-ui, sans-serif; }
+.imp-btn.pill .i { font: italic 700 15px/1 Georgia, serif; }
 
 /* equation: the "same year" caption sits under it, so the fraction keeps its shape on phones */
 .readbox .same { margin: 0 0 14px; color: var(--text-secondary); font-style: italic; }
@@ -311,3 +315,32 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
 }
 
 .panel[hidden], .backdrop[hidden], .prow[hidden], .p-sec[hidden], .p-empty[hidden] { display: none; }
+
+/* what the line says */
+.readline h2 { margin-bottom: 12px; }
+.lines { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 340px), 1fr)); gap: 14px; }
+.lc { border: 1px solid var(--border); border-left: 6px solid var(--lc); border-radius: 10px; background: var(--surface-0); padding: 14px 16px; min-width: 0; }
+.lc header { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.lc h3 { margin: 0; font-size: 18px; }
+.lc p { margin: 12px 0 0; color: var(--text-secondary); font-size: 15px; }
+.lc p strong { color: var(--text-primary); }
+.pair { display: flex; align-items: stretch; gap: 8px; }
+.pair .arrow { align-self: center; font-size: 22px; color: var(--text-secondary); flex: none; }
+.fig { flex: 1 1 0; min-width: 0; background: var(--surface-1); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; }
+.fig .yr { font-size: 14px; color: var(--text-secondary); }
+.fig .big { font-size: 30px; font-weight: 700; line-height: 1.15; font-variant-numeric: tabular-nums; margin-top: 2px; }
+.fig .sub { font-size: 14px; color: var(--text-muted); font-variant-numeric: tabular-nums; }
+.lc .edge { color: var(--text-muted); font-size: 14px; }
+.lc .chip { font-size: 14px; }
+@media (max-width: 600px) { .fig .big { font-size: 26px; } .fig { padding: 8px 10px; } }
+
+.chip-x .short { display: none; }
+@media (max-width: 600px) {
+  .chip-x .full { display: none; }
+  .chip-x .short { display: inline; }
+  .chip-x { font-size: 14px; gap: 6px; padding: 2px 8px; }
+  .chiprow { flex-direction: column; align-items: flex-start; gap: 6px; }
+  .chiprow .chips { width: 100%; }
+  #agirNote { align-self: stretch; }
+  #agirNote .imp-btn.pill { width: 100%; justify-content: center; height: 44px; }
+}

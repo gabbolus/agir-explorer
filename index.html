@@ -6,9 +6,9 @@
   <meta name="color-scheme" content="light dark">
   <title>Age Group Income Ratio Explorer</title>
   <meta name="description" content="Age Group Income Ratio and the decomposition of its growth, from LIS microdata. Guaitoli and Pancrazi.">
-  <link rel="stylesheet" href="assets/style.css?v=20261024n">
+  <link rel="stylesheet" href="assets/style.css?v=20261024q">
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-dist-min@2.35.2/plotly.min.js"></script>
-  <script src="data/agir_data.js?v=20261024n"></script>
+  <script src="data/agir_data.js?v=20261024q"></script>
 </head>
 <body>
 <div class="viz-root">
@@ -73,7 +73,7 @@
         <button id="toggleAgirTable" type="button" aria-expanded="false" aria-controls="agirTableWrap">Show table</button>
       </div>
     </div>
-    <ul class="chips" id="selChips" aria-label="Lines shown on the chart"></ul>
+    <div class="chiprow"><ul class="chips" id="selChips" aria-label="Lines shown on the chart"></ul><div id="agirNote"></div></div>
   <section class="controls" id="controls" tabindex="-1" aria-label="Period filters">
     <label>Periods
       <select id="ptype">
@@ -84,11 +84,14 @@
     <label>From <select id="from"></select></label>
     <label>To <select id="to"></select></label>
   </section>
-    <p class="note ctl-after">From and To also set the headline numbers above and the decomposition further down.</p>
-    <div class="note" id="agirNote"></div>
     <div id="agirChart" class="chart" role="img" aria-labelledby="agirTitle" aria-describedby="agirSummary"></div>
     <p id="agirSummary" class="sr-only"></p>
     <div id="agirTableWrap" class="table-wrap" hidden></div>
+  </section>
+
+  <section class="card readline" id="readLine" aria-labelledby="readLineTitle" hidden>
+    <h2 id="readLineTitle">What the line says</h2>
+    <div class="lines" id="readLineBody"></div>
   </section>
 
 
@@ -201,6 +204,6 @@
   <div id="noteTip" class="tip" role="tooltip" hidden></div>
   <footer class="foot">Data: Luxembourg Income Study (LIS) Database, (multiple countries; microdata runs completed on 22 October 2026). Luxembourg: LIS. All figures are aggregates computed by the authors.</footer>
 </div>
-<script src="assets/app.js?v=20261024n"></script>
+<script src="assets/app.js?v=20261024q"></script>
 </body>
 </html>
