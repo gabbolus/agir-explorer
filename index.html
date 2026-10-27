@@ -23,9 +23,9 @@
   <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-  <link rel="stylesheet" href="assets/style.css?v=20261027b">
+  <link rel="stylesheet" href="assets/style.css?v=20261027d">
   <script src="https://cdn.jsdelivr.net/npm/plotly.js-basic-dist-min@2.35.2/plotly-basic.min.js"></script>
-  <script src="data/agir_data.js?v=20261027b"></script>
+  <script src="data/agir_data.js?v=20261027d"></script>
 </head>
 <body>
 <div class="viz-root">
@@ -124,7 +124,8 @@
       </div>
     </div>
     <p class="note ov-lede">Each row shows a country&rsquo;s Age Group Income Ratio in the two periods chosen above. Right of the dotted line (1), <span class="chip old">55&ndash;64</span> year-olds have the higher average income; left of it, <span class="chip young">25&ndash;34</span> year-olds do.</p>
-  <section class="controls" id="controls3" aria-label="Sorting">
+  <section class="controls" id="controls3" aria-label="Countries and sorting">
+    <div class="picker sub" id="ovPicker"></div>
     <label>Sort
       <select id="osort">
         <option value="to">By latest value</option>
@@ -159,14 +160,8 @@
     <p class="same">Income growth is the change in average income between the two chosen periods, as a percentage of initial income, per year. GRD stands for Growth Rate Differential and is measured in percentage points per year.</p>
     <p class="drivers">Income growth depends on the change in <span class="mchip m1">wages</span> and <span class="mchip m2">employment</span>, plus changes in <span class="mchip m3">transfer income</span> per recipient and the <span class="mchip m4">share</span> of transfer recipients.</p>
     <p class="note sign">A positive GRD means the Age Group Income Ratio is rising, by roughly that many per cent per year: income is shifting towards <span class="chip old">55&ndash;64</span> year-olds. A negative GRD means it is shifting towards <span class="chip young">25&ndash;34</span> year-olds. The black diamond is the total; each coloured bar is one component&rsquo;s contribution.</p>
-  <section class="controls" id="controls2" aria-label="Country filters">
-    <label>Countries
-      <select id="group">
-        <option value="all">All</option>
-        <option value="High-income">High-income (2004 GDP)</option>
-        <option value="Middle-income">Middle-income (2004 GDP)</option>
-      </select>
-    </label>
+  <section class="controls" id="controls2" aria-label="Countries and sorting">
+    <div class="picker sub" id="drPicker"></div>
     <label>Sort
       <select id="sort">
         <option value="grd">By total change</option>
@@ -276,6 +271,6 @@
   <div id="noteTip" class="tip" role="tooltip" hidden></div>
   <footer class="foot">Data: Luxembourg Income Study (LIS) Database, (multiple countries; microdata runs completed on 22 October 2026). Luxembourg: LIS. All figures are aggregates computed by the authors. Code: <a href="https://github.com/gabbolus/agir-explorer" target="_blank" rel="noopener">GitHub</a> (MIT licence).</footer>
 </div>
-<script src="assets/app.js?v=20261027b"></script>
+<script src="assets/app.js?v=20261027d"></script>
 </body>
 </html>

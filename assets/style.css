@@ -381,15 +381,13 @@ details.defs > .note { max-width: 820px; }
 
 /* overview dot chart */
 .ov-lede { max-width: 900px; margin: 0 0 4px; }
-.ov-lede .chip, .drv .mchip { font-size: 14px; }
+.ov-lede .chip { font-size: 14px; }
 .legend .seg { width: 20px; height: 3px; border-radius: 2px; display: inline-block; }
 .legend .seg.up { background: var(--c-old); }
 .legend .seg.down { background: var(--c-young); }
 .legend .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: var(--text-secondary); }
 .legend .dot.open { background: transparent; border: 2px solid var(--text-secondary); }
 .per-note { color: var(--text-muted); font-size: 12px; }
-/* "what drove it" line in the cards */
-.lc .drv { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); font-size: 15px; line-height: 1.7; }
 /* copy link and citation */
 .linkbox { font: inherit; font-size: 14px; flex: 1 1 100%; min-width: 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-0); color: var(--text-primary); }
 .cite .ref { max-width: 900px; margin: 0 0 12px; color: var(--text-primary); overflow-wrap: anywhere; }
@@ -405,3 +403,11 @@ details.bib > summary { cursor: pointer; font-weight: 600; color: var(--link); p
   .cmp .linkbox { grid-column: 1 / -1; }
   details.bib > summary { padding: 11px 0; }
 }
+
+/* country pickers of the two lower charts */
+.picker.sub .panel { left: 0; right: auto; }
+.p-quick { display: flex; flex-wrap: wrap; gap: 8px; padding: 10px 0 4px; }
+.p-quick button { font-size: 14px; }
+.p-quick[hidden] { display: none; }
+.controls .picker.sub > button { min-width: 200px; }
+@media (max-width: 600px) { .controls .picker.sub { flex: 1 1 100%; } .controls .picker.sub > button { width: 100%; } .picker.sub .panel { left: 0; right: 0; } }

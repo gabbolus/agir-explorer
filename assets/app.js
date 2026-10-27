@@ -180,7 +180,9 @@
   }
 
   // --------------------------------------------------------------- state ----
-  const state = { ptype: "wave", from: 1, to: 7, group: "all", sort: "grd", cmp: [], grp: { "High-income": true, "Middle-income": true }, osort: "to", ovTable: false, table: false, agirTable: false, exact: false };
+  const state = { ptype: "wave", from: 1, to: 7, group: "all", sort: "grd", cmp: [], grp: { "High-income": true, "Middle-income": true }, osort: "to", ovTable: false, table: false, agirTable: false, exact: false,
+    ovSel: { c: new Set(), g: { "High-income": true, "Middle-income": true } }, drSel: { c: new Set(), g: { "High-income": true, "Middle-income": true } } };
+  countries.forEach(c => { state.ovSel.c.add(c); state.drSel.c.add(c); });
 
   function periodsAvailable(ptype) {
     const s = new Set();
@@ -310,6 +312,64 @@
     document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("pickPanel").hidden) { openPicker(false); $("pickBtn").focus(); } });
   }
 
+
+  // ---- country pickers for the two lower charts: any set of countries, plus the two group averages
+  function subPicker(id, sel, onChange, what) {
+    const root = $(id), N = countries.length;
+    root.innerHTML = `<button type="button" aria-haspopup="dialog" aria-expanded="false"><span class="pl"></span><span class="caret" aria-hidden="true">&#9662;</span></button>` +
+      `<div class="backdrop" hidden></div><div class="panel" role="dialog" aria-label="Choose which countries to show in the ${what}" tabindex="-1" hidden>` +
+      `<div class="p-head"><input type="search" placeholder="Search countries" aria-label="Search countries" autocomplete="off"><button type="button" class="pnone">Clear all</button></div>` +
+      `<div class="p-body"><div class="p-quick" role="group" aria-label="Quick choices"><button type="button" data-q="all">All countries</button><button type="button" data-q="High-income">High-income only</button><button type="button" data-q="Middle-income">Middle-income only</button></div>` +
+      `<div class="p-sec" role="group" aria-label="Group averages"><h3>Group averages</h3>${GROUPS.map(([g]) => `<label class="prow" data-key="G:${g}" data-name="${g.toLowerCase()} average"><input type="checkbox" value="G:${g}"><span class="nm">${g} average</span></label>`).join("")}</div>` +
+      GROUPS.map(([g]) => `<div class="p-sec" role="group" aria-label="${g} countries"><h3>${g} countries</h3>${countries.filter(c => groupOf(c) === g).map(c => `<label class="prow" data-key="C:${c}" data-name="${c.toLowerCase()}"><input type="checkbox" value="C:${c}"><span class="nm">${withMark(c)}</span></label>`).join("")}</div>`).join("") +
+      `<p class="p-empty" hidden>No country matches your search.</p></div>` +
+      `<div class="p-foot"><span class="pc" aria-live="polite"></span><button type="button" class="primary pdone">Done</button></div></div>`;
+    const btn = root.querySelector(":scope > button"), panel = root.querySelector(".panel"), back = root.querySelector(".backdrop"), search = root.querySelector("input[type=search]");
+    const sync = () => {
+      root.querySelectorAll(".prow").forEach(r => {
+        const k = r.dataset.key; r.querySelector("input").checked = k.startsWith("G:") ? !!sel.g[k.slice(2)] : sel.c.has(k.slice(2));
+      });
+      const na = Object.values(sel.g).filter(Boolean).length;
+      root.querySelector(".pl").textContent = `Countries · ${sel.c.size === N ? "all " + N : sel.c.size + " of " + N}` + (na < 2 ? ` · ${na} avg` : "");
+      root.querySelector(".pc").textContent = `${sel.c.size} of ${N} countries.`;
+    };
+    const open = o => {
+      panel.hidden = !o; back.hidden = !o || !isNarrow();
+      btn.setAttribute("aria-expanded", String(o));
+      document.documentElement.classList.toggle("sheet-open", o && isNarrow());
+      if (o) panel.focus({ preventScroll: true }); else { search.value = ""; filter(); }
+    };
+    const filter = () => {
+      const q = search.value.trim().toLowerCase(); let shown = 0;
+      root.querySelectorAll(".prow").forEach(r => { const hit = !q || r.dataset.name.includes(q); r.hidden = !hit; if (hit && r.dataset.key.startsWith("C:")) shown++; });
+      root.querySelectorAll(".p-sec").forEach(s => { s.hidden = ![...s.querySelectorAll(".prow")].some(r => !r.hidden); });
+      root.querySelector(".p-quick").hidden = !!q;
+      root.querySelector(".p-empty").hidden = !q || shown > 0;
+    };
+    const change = msg => { sync(); onChange(); announce(msg + ` ${sel.c.size} countries shown.`); };
+    btn.addEventListener("click", () => open(panel.hidden));
+    root.querySelector(".pdone").addEventListener("click", () => { open(false); btn.focus(); });
+    back.addEventListener("click", () => open(false));
+    search.addEventListener("input", filter);
+    root.querySelector(".pnone").addEventListener("click", () => { sel.c.clear(); change("All countries removed."); });
+    root.querySelector(".p-quick").addEventListener("click", e => {
+      const b = e.target.closest("button"); if (!b) return;
+      sel.c.clear(); countries.filter(c => b.dataset.q === "all" || groupOf(c) === b.dataset.q).forEach(c => sel.c.add(c));
+      change(b.textContent + ".");
+    });
+    root.querySelector(".p-body").addEventListener("change", e => {
+      if (!e.target.matches("input")) return;
+      const k = e.target.value, on = e.target.checked;
+      if (k.startsWith("G:")) sel.g[k.slice(2)] = on; else (on ? sel.c.add(k.slice(2)) : sel.c.delete(k.slice(2)));
+      change(`${k.slice(2)}${k.startsWith("G:") ? " average" : ""} ${on ? "added" : "removed"}.`);
+    });
+    document.addEventListener("click", e => { if (!panel.hidden && !isNarrow() && !e.target.closest("#" + id)) open(false); });
+    document.addEventListener("keydown", e => { if (e.key === "Escape" && !panel.hidden) { open(false); btn.focus(); } });
+    sync();
+    return sync;
+  }
+  let syncOvPicker = () => {}, syncDrPicker = () => {};
+
   // ------------------------------------------------------------ chart 1 ----
   let agirTbl = [];
   function renderAgir() {
@@ -392,6 +452,7 @@
     "star": "6,0 7.5,4.2 12,4.4 8.5,7.2 9.7,11.6 6,9 2.3,11.6 3.5,7.2 0,4.4 4.5,4.2" };
   const pct = v => Math.round(100 * (v - 1));
   const gapWords = (v, than = true) => { const p = pct(v); return p === 0 ? "about the same" + (than ? " as" : "") : `${Math.abs(p)}% ${p > 0 ? "higher" : "lower"}` + (than ? " than" : ""); };
+  const gapThan = v => `<strong>${gapWords(v, false)}</strong>${pct(v) === 0 ? " as" : " than"}`;
   function renderReadLine() {
     const { ptype, from, to } = state, P = t => label(ptype, t);
     const old = `<span class="chip old">55&ndash;64</span>`, young = `<span class="chip young">25&ndash;34</span>`;
@@ -402,28 +463,21 @@
     hint.hidden = useC;
     hint.textContent = useC ? "" : `Average of the countries in each group. Tick ${state.cmp.length > 2 ? "only " : ""}one or two countries in the chart above to read their lines here.`;
     const fig = d => `<div class="fig"><div class="yr">${P(d.t)}</div><div class="big">${d.v.toFixed(2)}</div><div class="sub">AGIR${d.imp && d.imp.length ? ", partly imputed" : ""}</div></div>`;
-    const NAMES = { wage: ["wages", "m1"], employ: ["employment", "m2"], tr_inc: ["transfer income", "m3"], tr_share: ["transfer share", "m4"], other: ["other income", "m5"] };
-    const driver = (d, avgNote = "") => {
-      if (!d) return "";
-      const k = MARGINS.map(m => m.key).reduce((b, x) => (Math.abs(d[x]) > Math.abs(d[b]) ? x : b));
-      return `<p class="drv"><strong>What drove it</strong> (${P(d.from)} to ${P(d.to)}${avgNote}): the largest contribution came from <span class="mchip ${NAMES[k][1]}">${NAMES[k][0]}</span>, ` +
-        `${fmt(d[k])} percentage points per year, pushing the ratio ${d[k] > 0 ? "up" : "down"}. <a href="#decompTitle">See all components</a></p>`;
-    };
     const card = (col, ico, title, pts, who, edge = () => "", extra = "") => {
       const head = `<header>${ico}<h3>${title}</h3></header>`;
       if (!pts.length) return `<article class="lc" style="--lc:var(${col})">${head}<p>No survey for this country between ${P(from)} and ${P(to)}.</p></article>`;
       const a = pts[0], z = pts[pts.length - 1];
-      if (a === z) return `<article class="lc" style="--lc:var(${col})">${head}<div class="pair">${fig(a)}</div><p>${who}, the average income of ${old} year-olds was <strong>${gapWords(a.v)}</strong> that of ${young} year-olds in ${P(a.t)}. That is the only survey in the selected range.</p>${extra}</article>`;
+      if (a === z) return `<article class="lc" style="--lc:var(${col})">${head}<div class="pair">${fig(a)}</div><p>${who}, the average income of ${old} year-olds was ${gapThan(a.v)} that of ${young} year-olds in ${P(a.t)}. That is the only survey in the selected range.</p>${extra}</article>`;
       const dp = Math.round(100 * (z.v - a.v));
       const delta = dp === 0 ? "The figure is unchanged." : `A change of <strong>${dp > 0 ? "+" : "\u2212"}${Math.abs(dp)} percentage points</strong> since ${P(a.t)}.`;
       return `<article class="lc" style="--lc:var(${col})">${head}<div class="pair">${fig(a)}<span class="arrow" aria-hidden="true">&rarr;</span>${fig(z)}</div>` +
-        `<p>${who}, the average income of ${old} year-olds was <strong>${gapWords(a.v)}</strong> that of ${young} year-olds in ${P(a.t)}${edge(a, from)}. ` +
+        `<p>${who}, the average income of ${old} year-olds was ${gapThan(a.v)} that of ${young} year-olds in ${P(a.t)}${edge(a, from)}. ` +
         `In ${P(z.t)}${edge(z, to)} it was <strong>${gapWords(z.v, false)}</strong>. ${delta}</p>${extra}</article>`;
     };
     if (useC) {
       const edge = (d, want) => d.t !== want ? ` <span class="edge">(${want === from ? "first" : "last"} survey in the selected range)</span>` : "";
       $("readLineBody").innerHTML = state.cmp.map(c => card(SLOT_COL[slotOf[c]], countryIcon(c), withMark(c),
-        agirSeries(c, ptype).filter(d => d.t >= from && d.t <= to), `In <strong>${c}</strong>`, edge, driver(decomp(c, ptype, from, to)))).join("");
+        agirSeries(c, ptype).filter(d => d.t >= from && d.t <= to), `In <strong>${c}</strong>`, edge)).join("");
       return;
     }
     $("readLineBody").innerHTML = GROUPS.map(([g, col]) => {
@@ -432,10 +486,7 @@
       const imp = [...new Set(pts.flatMap(d => d.imp))];
       const id = `imp-rl-${g}`;
       const extra = imp.length ? `<button type="button" class="imp-btn" aria-expanded="false" aria-controls="${id}" aria-label="Partly imputed: show which countries"><span aria-hidden="true">i</span></button><div class="imp-pop" id="${id}" role="note" hidden><strong>Partly imputed.</strong> ${imp.join(", ")} carried forward from their latest survey.</div>` : "";
-      const ds = countries.filter(c => groupOf(c) === g && !CAVEAT[c]).map(c => decomp(c, ptype, from, to)).filter(Boolean);
-      const gd = ds.length ? Object.fromEntries(["growth", ...MARGINS.map(m => m.key)].map(k => [k, ds.reduce((s, r) => s + r[k], 0) / ds.length])) : null;
-      if (gd) { gd.from = from; gd.to = to; }
-      return card(col, groupIcon(g), `${g} average`, pts, `In the average ${g.toLowerCase()} country`, () => "", extra + driver(gd, ", average across countries"));
+      return card(col, groupIcon(g), `${g} average`, pts, `In the average ${g.toLowerCase()} country`, () => "", extra);
     }).join("");
   }
 
@@ -451,15 +502,21 @@
       $("ovNote").innerHTML = ""; $("ovLegend").innerHTML = ""; $("ovTableWrap").innerHTML = ""; ovRows = [];
       $("ovSummary").textContent = ovAnnounce = "Choose a To period after the From period."; syncUrl(); return;
     }
+    const osel = state.ovSel;
+    if (!osel.c.size && !Object.values(osel.g).some(Boolean)) {
+      Plotly.purge("ovChart"); ch.innerHTML = `<p class="note">No countries selected. Use \u201cCountries\u201d above to choose some.</p>`;
+      $("ovNote").innerHTML = ""; $("ovLegend").innerHTML = ""; $("ovTableWrap").innerHTML = ""; ovRows = [];
+      $("ovSummary").textContent = ovAnnounce = "No countries selected."; syncUrl(); return;
+    }
     if (ch.querySelector(".note")) ch.innerHTML = "";
     const rows = [], missing = [];
-    countries.forEach(c => {
+    countries.filter(c => osel.c.has(c)).forEach(c => {
       const obs = agirSeries(c, ptype).filter(d => d.t >= from && d.t <= to);
       if (!obs.length) { missing.push(c); return; }
       const a = obs[0], z = obs[obs.length - 1];
       rows.push({ name: c, a, z, single: a === z, moved: a.t !== from || z.t !== to });
     });
-    const avgs = [["Middle-income", "--series-2"], ["High-income", "--series-1"]].map(([g]) => {
+    const avgs = [["Middle-income", "--series-2"], ["High-income", "--series-1"]].filter(([g]) => osel.g[g]).map(([g]) => {
       const s = groupSeries(countries.filter(c => groupOf(c) === g && !CAVEAT[c]), ptype);
       const a = s.find(d => d.t === from), z = s.find(d => d.t === to);
       return a && z ? { name: `${g} average`, isAvg: true, a, z, single: false, moved: false } : null;
@@ -493,7 +550,7 @@
     const lay = baseLayout();
     lay.showlegend = false; lay.hovermode = "closest";
     lay.margin = narrow ? { l: 8, r: 12, t: 30, b: 56 } : Object.assign(lay.margin, { l: 170, t: 30 });
-    lay.height = Math.max(360, (narrow ? 21 : 24) * all.length + 100);
+    lay.height = Math.max(narrow ? 200 : 220, (narrow ? 21 : 24) * all.length + 100);
     lay.xaxis = axis({ title: { text: narrow ? "AGIR" : "Age Group Income Ratio, 55–64 / 25–34", font: { color: css("--text-secondary") } } });
     lay.xaxis2 = axis({ overlaying: "x", side: "top", matches: "x", showgrid: false, zeroline: false, showline: false });
     // rows in sorted order (otherwise Plotly orders them by the first trace that uses them)
@@ -534,6 +591,18 @@
   const startYear = (pt, t) => (pt === "wave" ? 2004 + 3 * (t - 1) : t);
   const fromYear = (pt, y) => (pt === "wave" ? Math.floor((y - 2004) / 3) + 1 : y);
   let urlReady = false;
+  // countries chosen in a lower chart: nothing when all, "high" or "middle" for a whole group, "none", or a list
+  const GSET = g => countries.filter(c => groupOf(c) === g);
+  function selParam(set) {
+    if (set.size === countries.length) return "";
+    if (!set.size) return "none";
+    for (const [g, w] of [["High-income", "high"], ["Middle-income", "middle"]]) { const l = GSET(g); if (l.length === set.size && l.every(c => set.has(c))) return w; }
+    return countries.filter(c => set.has(c)).map(encodeURIComponent).join(",");
+  }
+  function readSel(sl, cs, as) {
+    if (cs) { sl.c.clear(); (cs === "none" ? [] : cs === "high" ? GSET("High-income") : cs === "middle" ? GSET("Middle-income") : cs.split(",").map(x => x.trim()).filter(c => countries.includes(c))).forEach(c => sl.c.add(c)); }
+    if (as) { sl.g["High-income"] = as === "high"; sl.g["Middle-income"] = as === "middle"; }
+  }
   function syncUrl() {
     if (!urlReady) return;
     const p = [], dFrom = state.ptype === "wave" ? 1 : 2004, dTo = state.ptype === "wave" ? 7 : 2022;
@@ -544,7 +613,11 @@
     if (state.from !== dFrom) p.push("from=" + startYear(state.ptype, state.from));
     if (state.to !== dTo) p.push("to=" + startYear(state.ptype, state.to));
     if (state.osort !== "to") p.push("rank=" + state.osort);
-    if (state.group !== "all") p.push("drivers=" + (state.group === "High-income" ? "high" : "middle"));
+    [["ov", state.ovSel], ["dr", state.drSel]].forEach(([k, sl]) => {
+      const cs = selParam(sl.c); if (cs) p.push(`${k}=${cs}`);
+      const gs = GROUPS.filter(([x]) => sl.g[x]).map(([x]) => x === "High-income" ? "high" : "middle");
+      if (gs.length < 2) p.push(`${k}a=${gs.length ? gs[0] : "none"}`);
+    });
     if (SORTS[state.sort]) p.push("sort=" + SORTS[state.sort]);
     const url = location.pathname + (p.length ? "?" + p.join("&") : "") + location.hash;
     if (url !== location.pathname + location.search + location.hash) history.replaceState(null, "", url);
@@ -558,8 +631,10 @@
     const av = q.get("averages");
     if (av) { state.grp["High-income"] = av === "high"; state.grp["Middle-income"] = av === "middle"; }
     if (["change", "name"].includes(q.get("rank"))) { state.osort = q.get("rank"); $("osort").value = state.osort; }
-    const dr = q.get("drivers");
-    if (dr === "high" || dr === "middle") { state.group = dr === "high" ? "High-income" : "Middle-income"; $("group").value = state.group; }
+    readSel(state.ovSel, q.get("ov"), q.get("ova"));
+    readSel(state.drSel, q.get("dr"), q.get("dra"));
+    const dr = q.get("drivers");   // older links
+    if (dr === "high" || dr === "middle") readSel(state.drSel, dr, dr);
     const so = Object.keys(SORTS).find(k => SORTS[k] && SORTS[k] === q.get("sort"));
     if (so) { state.sort = so; $("sort").value = so; }
   }
@@ -582,7 +657,7 @@
   function renderDecomp() {
     const { ptype, from, to } = state;
     $("decompPeriod").textContent = `${label(ptype, from)} to ${label(ptype, to)}`;
-    let list = countries.filter(c => state.group === "all" || groupOf(c) === state.group);
+    const dsel = state.drSel, list = countries.filter(c => dsel.c.has(c));
     const res = [], missing = [];
     if (from >= to) {
       Plotly.purge("decompChart");
@@ -592,18 +667,25 @@
       $("decompSummary").textContent = decompAnnounce = "Choose a To period after the From period.";
       return;
     }
+    if (!list.length && !Object.values(dsel.g).some(Boolean)) {
+      Plotly.purge("decompChart"); $("decompLegend").hidden = true;
+      $("decompChart").innerHTML = `<p class="note">No countries selected. Use \u201cCountries\u201d above to choose some.</p>`;
+      $("missingNote").textContent = ""; $("tableWrap").innerHTML = ""; current = [];
+      $("decompSummary").textContent = decompAnnounce = "No countries selected."; syncUrl(); return;
+    }
+    $("decompLegend").hidden = false;
     list.forEach(c => { const d = decomp(c, ptype, from, to); d ? res.push(d) : missing.push(c); });
     const keyOf = { grd: "growth", wage: "wage", emp: "employ", trinc: "tr_inc", trshare: "tr_share" }[state.sort];
     res.sort((a, b) => state.sort === "name" ? b.country.localeCompare(a.country) : a[keyOf] - b[keyOf]);
     // group averages on top (excluding countries with caveats)
     const avg = g => {
-      const a = res.filter(r => r.group === g && !CAVEAT[r.country]);
+      const a = countries.filter(c => groupOf(c) === g && !CAVEAT[c]).map(c => decomp(c, ptype, from, to)).filter(Boolean);
       if (!a.length) return null;
       const o = { country: g, group: g, isAvg: true };
       ["growth", ...MARGINS.map(m => m.key)].forEach(k => { o[k] = a.reduce((s, r) => s + r[k], 0) / a.length; });
       return o;
     };
-    const avgs = ["Middle-income", "High-income"].filter(g => state.group === "all" || state.group === g).map(avg).filter(Boolean);
+    const avgs = ["Middle-income", "High-income"].filter(g => dsel.g[g]).map(avg).filter(Boolean);
     const parts = avgs.slice().reverse().map(r => `${r.country} average: total ${fmt(r.growth)} percentage points per year (wages ${fmt(r.wage)}, employment ${fmt(r.employ)}, transfer income ${fmt(r.tr_inc)}, transfer share ${fmt(r.tr_share)}, other income ${fmt(r.other)}).`);
     const byG = res.slice().sort((a, b) => b.growth - a.growth);
     const ext = byG.length ? ` Among the ${byG.length} countries shown, the total ranges from ${fmt(byG[byG.length - 1].growth)} (${byG[byG.length - 1].country}) to ${fmt(byG[0].growth)} (${byG[0].country}).` : "";
@@ -641,7 +723,7 @@
     const narrow = isNarrow();
     // on phones the labels get only the room they need, so the bars use the full width
     lay.margin = narrow ? { l: 8, r: 8, t: 30, b: 56 } : Object.assign(lay.margin, { l: 170, t: 30 });
-    lay.height = Math.max(360, (narrow ? 28 : 26) * all.length + 100);
+    lay.height = Math.max(narrow ? 200 : 220, (narrow ? 28 : 26) * all.length + 100);
     // the legend is plain HTML above the chart, so it can use the full width and leave room for the top scale
     lay.showlegend = false;
     const lg = $("decompLegend");
@@ -748,7 +830,6 @@
   });
   $("from").addEventListener("change", e => { state.from = +e.target.value; renderReadLine(); renderOverview(); renderDecomp(); announce(decompAnnounce); });
   $("to").addEventListener("change", e => { state.to = +e.target.value; renderReadLine(); renderOverview(); renderDecomp(); announce(decompAnnounce); });
-  $("group").addEventListener("change", e => { state.group = e.target.value; renderDecomp(); announce(decompAnnounce); });
   $("sort").addEventListener("change", e => { state.sort = e.target.value; renderDecomp(); announce(decompAnnounce); });
   $("osort").addEventListener("change", e => { state.osort = e.target.value; renderOverview(); announce(ovAnnounce); });
   $("toggleOvTable").addEventListener("click", () => { state.ovTable = !state.ovTable; renderOvTable(); });
@@ -815,5 +896,8 @@
     `<p><strong>${c}${NOTE_MARK}</strong> ${noteText(c)}</p>`).join("");
   if (!isNarrow()) { $("readMore").open = true; $("defs").open = true; }
   readUrl();
-  fillPeriods(); wirePicker(); urlReady = true; renderAll();
+  fillPeriods(); wirePicker();
+  syncOvPicker = subPicker("ovPicker", state.ovSel, renderOverview, "overview chart");
+  syncDrPicker = subPicker("drPicker", state.drSel, renderDecomp, "drivers chart");
+  urlReady = true; renderAll();
 })();
