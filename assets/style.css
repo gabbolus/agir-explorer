@@ -290,7 +290,8 @@ th[scope="row"] { color: var(--text-primary); font-weight: 400; text-align: left
 .prow { flex-direction: row; align-items: center; gap: 10px; min-height: 40px; padding: 0 4px; border-radius: 6px; color: var(--text-primary); font-size: 15px; cursor: pointer; }
 .prow:hover { background: var(--surface-0); }
 .prow input { width: 22px; height: 22px; margin: 0; flex: none; accent-color: var(--focus); }
-.prow .sw, .chip-x .sw { width: 12px; height: 12px; border-radius: 3px; flex: none; background: var(--sw, transparent); }
+.prow .sw { width: 28px; height: 12px; flex: none; display: inline-flex; }
+.ico { flex: none; display: block; }
 .prow.off { opacity: 0.5; cursor: not-allowed; }
 .p-empty { color: var(--text-muted); padding: 12px 4px; margin: 0; }
 .p-foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 10px; border-top: 1px solid var(--border); font-size: 14px; color: var(--text-secondary); }
@@ -343,4 +344,64 @@ html.sheet-open, html.sheet-open body { overflow: hidden; }
   .chiprow .chips { width: 100%; }
   #agirNote { align-self: stretch; }
   #agirNote .imp-btn.pill { width: 100%; justify-content: center; height: 44px; }
+}
+
+/* reading guide: short version always visible, the rest folds away on phones */
+.callout { display: flex; gap: 10px; align-items: flex-start; max-width: 820px; margin: 0 0 14px; padding: 10px 14px;
+  border: 1px solid var(--border); border-radius: 8px; background: var(--surface-0); color: var(--text-secondary); }
+.callout strong, .callout .x { color: var(--text-primary); }
+.callout .x { font-weight: 700; }
+details.more > summary, details.defs > summary { cursor: pointer; font-weight: 600; color: var(--link); padding: 6px 0; width: fit-content; }
+details.more[open] > summary, details.defs[open] > summary { margin-bottom: 10px; }
+details.more .compare .col p { margin: 0; }
+details.defs { margin-top: 14px; border-top: 1px solid var(--border); padding-top: 8px; }
+details.defs > .note { max-width: 820px; }
+#charts:focus { outline: none; }
+.rl-hint { margin: -4px 0 12px; }
+.lc { position: relative; }
+.lc header .ico { width: 28px; height: 12px; }
+.lc .imp-btn { top: 12px; right: 12px; }
+.lc .imp-pop { top: 46px; }
+.note.sign { max-width: 900px; }
+.note.sign .chip { font-size: 14px; }
+/* drivers chart: key and notes for rows with a shorter period */
+.notesrow { position: relative; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px; margin: 10px 0 4px; }
+.notesrow .key { margin: 0; flex: 1 1 280px; }
+.notesrow .imp-btn.pill { flex: none; }
+.notesrow .imp-pop { top: calc(100% + 4px); left: 0; right: 0; max-height: 60vh; overflow-y: auto; }
+.table-wrap .per.short { color: var(--text-primary); font-weight: 600; }
+.per-sub { display: none; }
+@media (max-width: 600px) {
+  details.more > summary, details.defs > summary { padding: 11px 0; }
+  .per-sub { display: block; font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+  .notesrow { flex-direction: column; align-items: stretch; }
+  .notesrow .key { flex: none; }
+  .notesrow .imp-btn.pill { width: 100%; justify-content: center; height: 44px; }
+}
+
+/* overview dot chart */
+.ov-lede { max-width: 900px; margin: 0 0 4px; }
+.ov-lede .chip, .drv .mchip { font-size: 14px; }
+.legend .seg { width: 20px; height: 3px; border-radius: 2px; display: inline-block; }
+.legend .seg.up { background: var(--c-old); }
+.legend .seg.down { background: var(--c-young); }
+.legend .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; background: var(--text-secondary); }
+.legend .dot.open { background: transparent; border: 2px solid var(--text-secondary); }
+.per-note { color: var(--text-muted); font-size: 12px; }
+/* "what drove it" line in the cards */
+.lc .drv { margin-top: 12px; padding-top: 10px; border-top: 1px dashed var(--border); font-size: 15px; line-height: 1.7; }
+/* copy link and citation */
+.linkbox { font: inherit; font-size: 14px; flex: 1 1 100%; min-width: 0; padding: 6px 10px; border: 1px solid var(--border); border-radius: 6px; background: var(--surface-0); color: var(--text-primary); }
+.cite .ref { max-width: 900px; margin: 0 0 12px; color: var(--text-primary); overflow-wrap: anywhere; }
+.cite .btns { margin-bottom: 10px; }
+.cite .copied { font-size: 14px; color: var(--text-secondary); }
+.cite pre { overflow-x: auto; background: var(--surface-0); border: 1px solid var(--border); border-radius: 8px; padding: 12px; font-size: 13px; margin: 8px 0 0; }
+details.bib > summary { cursor: pointer; font-weight: 600; color: var(--link); padding: 6px 0; width: fit-content; }
+#cite:focus { outline: none; }
+.foot a { color: var(--link); }
+@media (max-width: 600px) {
+  .cmp { grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); }
+  .cmp .picker { grid-column: 1 / -1; }
+  .cmp .linkbox { grid-column: 1 / -1; }
+  details.bib > summary { padding: 11px 0; }
 }

@@ -10,7 +10,7 @@
   // country notes: data features that affect the interpretation (marked with † in the charts)
   const UNEMP = "Transfers exclude unemployment benefits (not reported consistently across survey years).";
   const NOTES = {
-    "Israel": ["No individual-level transfer income in the LIS data; transfer margins are zero by construction.", UNEMP],
+    "Israel": ["No individual-level transfer income in the LIS data; transfer components are zero by construction.", UNEMP],
     "South Africa": ["Change of survey in 2023 (NIDS replaced by the Income and Expenditure Survey); comparisons across 2023 are not like-for-like. Excluded from group averages.", UNEMP],
     "Mexico": ["New ENIGH survey series from 2024; comparisons across 2024 are not like-for-like.", UNEMP],
     "Germany": ["Employment status missing for 15–26% of respondents aged 25–64 in 2018–2022; employment rates refer to respondents with non-missing status."],
@@ -160,6 +160,17 @@
   const CONFIG = { responsive: true, displaylogo: false, scrollZoom: false, doubleClick: false,
     modeBarButtonsToRemove: ["zoom2d", "pan2d", "zoomIn2d", "zoomOut2d", "autoScale2d", "resetScale2d", "lasso2d", "select2d"] };
 
+  // the chart's own camera button is replaced so the saved picture still has a legend
+  function exportPng(gd, name) {
+    const lay = Object.assign({}, gd.layout, { showlegend: true, margin: Object.assign({}, gd.layout.margin, { t: 60 }),
+      legend: Object.assign({}, gd.layout.legend, { traceorder: "normal" }) });
+    Plotly.toImage({ data: gd.data, layout: lay }, { format: "png", width: gd.offsetWidth, height: gd.offsetHeight + 46, scale: 2 })
+      .then(url => { const a = document.createElement("a"); a.href = url; a.download = name + ".png"; document.body.appendChild(a); a.click(); a.remove(); });
+  }
+  const AGIR_CONFIG = Object.assign({}, CONFIG, { modeBarButtonsToRemove: [...CONFIG.modeBarButtonsToRemove, "toImage"],
+    modeBarButtonsToAdd: [{ name: "Download plot as a PNG", icon: Plotly.Icons.camera, click: gd => exportPng(gd, "age_group_income_ratio") }] });
+
+  const PHONE_CONFIG = Object.assign({}, CONFIG, { displayModeBar: false });
   const isNarrow = () => window.innerWidth < 600;
   let announceTimer;
   function announce(msg) {          // screen-reader status message after a control changes
@@ -169,7 +180,7 @@
   }
 
   // --------------------------------------------------------------- state ----
-  const state = { ptype: "wave", from: 1, to: 7, group: "all", sort: "grd", cmp: [], grp: { "High-income": true, "Middle-income": true }, table: false, agirTable: false, exact: false };
+  const state = { ptype: "wave", from: 1, to: 7, group: "all", sort: "grd", cmp: [], grp: { "High-income": true, "Middle-income": true }, osort: "to", ovTable: false, table: false, agirTable: false, exact: false };
 
   function periodsAvailable(ptype) {
     const s = new Set();
@@ -190,6 +201,18 @@
   const SLOT_COL = ["--series-3", "--series-4", "--series-5", "--series-6", "--series-7", "--series-8"];
   const SLOT_SYM = ["diamond", "triangle-up", "star", "pentagon", "triangle-down", "hexagon"];
   const GROUPS = [["High-income", "--series-1"], ["Middle-income", "--series-2"]];
+  const GSYM = { "High-income": "circle", "Middle-income": "square" };
+  // small picture of a line as drawn in the chart: its colour, dash and marker shape
+  function lineIcon(sym, col, dash = false) {
+    const f = `fill="var(${col})"`;
+    const shape = sym === "circle" ? `<circle cx="6" cy="6" r="4.5" ${f}/>` : sym === "square" ? `<rect x="1.5" y="1.5" width="9" height="9" ${f}/>`
+      : `<polygon points="${SHAPES[sym]}" ${f}/>`;
+    return `<svg class="ico" viewBox="0 0 28 12" width="28" height="12" aria-hidden="true" focusable="false"><line x1="0" y1="6" x2="28" y2="6" stroke="var(${col})" stroke-width="2"${dash ? ' stroke-dasharray="5 3"' : ""}/><g transform="translate(8 0)">${shape}</g></svg>`;
+  }
+  const groupIcon = g => lineIcon(GSYM[g], GROUPS.find(x => x[0] === g)[1], g === "Middle-income");
+  const countryIcon = c => lineIcon(SLOT_SYM[slotOf[c]], SLOT_COL[slotOf[c]]);
+  // ticked countries are bold, with a dot in their line colour, in the other charts too
+  const hiLabel = (c, n) => c && state.cmp.includes(c) ? `<span style="color:${css(SLOT_COL[slotOf[c]])}">\u25CF</span> <b>${n}</b>` : n;
   const slotOf = {};
   const anyGroup = () => state.grp["High-income"] || state.grp["Middle-income"];
   function setCountry(c, on) {
@@ -220,21 +243,21 @@
     const full = state.cmp.length >= MAXC;
     document.querySelectorAll("#pickList .prow").forEach(r => {
       const key = r.dataset.key, cb = r.querySelector("input");
-      let on, col = null;
-      if (key.startsWith("G:")) { const g = key.slice(2); on = state.grp[g]; col = GROUPS.find(x => x[0] === g)[1]; }
-      else { const c = key.slice(2); on = state.cmp.includes(c); if (on) col = SLOT_COL[slotOf[c]]; }
+      let on, ico = "";
+      if (key.startsWith("G:")) { const g = key.slice(2); on = state.grp[g]; if (on) ico = groupIcon(g); }
+      else { const c = key.slice(2); on = state.cmp.includes(c); if (on) ico = countryIcon(c); }
       cb.checked = !!on;
       cb.disabled = !on && key.startsWith("C:") && full;
       r.classList.toggle("off", cb.disabled);
-      r.style.setProperty("--sw", col ? `var(${col})` : "transparent");
+      r.querySelector(".sw").innerHTML = ico;
     });
     $("pickLabel").textContent = lineLabel();
     $("pickCount").textContent = `${state.cmp.length} of ${MAXC} countries` + (full ? ": untick one to add another." : ".");
     const chips = [];
-    GROUPS.forEach(([g, col]) => { if (state.grp[g]) chips.push([`G:${g}`, `${g} average`, col, `${g} avg`]); });
-    state.cmp.forEach(c => chips.push([`C:${c}`, withMark(c), SLOT_COL[slotOf[c]]]));
+    GROUPS.forEach(([g]) => { if (state.grp[g]) chips.push([`G:${g}`, `${g} average`, groupIcon(g), `${g} avg`]); });
+    state.cmp.forEach(c => chips.push([`C:${c}`, withMark(c), countryIcon(c)]));
     $("selChips").innerHTML = chips.length
-      ? chips.map(([k, t, col, short]) => `<li><button type="button" class="chip-x" data-key="${k}" aria-label="Remove ${t.replace(NOTE_MARK, "")} from the chart"><span class="sw" style="background:var(${col})" aria-hidden="true"></span>${short ? `<span class="full">${t}</span><span class="short" aria-hidden="true">${short}</span>` : t}<span class="x" aria-hidden="true">&times;</span></button></li>`).join("")
+      ? chips.map(([k, t, ico, short]) => `<li><button type="button" class="chip-x" data-key="${k}" aria-label="Remove ${t.replace(NOTE_MARK, "")} from the chart">${ico}${short ? `<span class="full">${t}</span><span class="short" aria-hidden="true">${short}</span>` : t}<span class="x" aria-hidden="true">&times;</span></button></li>`).join("")
       : `<li class="none">No lines selected.</li>`;
   }
   function togglePick(key, on) {
@@ -243,7 +266,7 @@
     else { name = key.slice(2); ok = setCountry(name, on); }
     syncPicker();
     if (!ok) { announce(`Maximum of ${MAXC} countries. Untick one to add another.`); return; }
-    renderAgir();
+    renderAll();
     announce(`${name} ${on ? "added to" : "removed from"} the chart. ${state.cmp.length} countries and ${Object.values(state.grp).filter(Boolean).length} averages shown.`);
   }
   function openPicker(open) {
@@ -274,7 +297,7 @@
     $("pickClear").addEventListener("click", () => {
       GROUPS.forEach(([g]) => { state.grp[g] = false; });
       state.cmp.slice().forEach(c => setCountry(c, false));
-      syncPicker(); renderAgir(); announce("All lines removed from the chart.");
+      syncPicker(); renderAll(); announce("All lines removed from the chart.");
     });
     $("pickList").addEventListener("change", e => { if (e.target.matches("input")) togglePick(e.target.value, e.target.checked); });
     $("selChips").addEventListener("click", e => {
@@ -285,24 +308,6 @@
     });
     document.addEventListener("click", e => { if (!$("pickPanel").hidden && !isNarrow() && !e.target.closest("#picker")) openPicker(false); });
     document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("pickPanel").hidden) { openPicker(false); $("pickBtn").focus(); } });
-  }
-
-  // --------------------------------------------------------------- tiles ----
-  function renderTiles() {
-    const groups = [["High-income", "--series-1"], ["Middle-income", "--series-2"]];
-    $("tiles").innerHTML = groups.map(([g, col]) => {
-      const list = countries.filter(c => groupOf(c) === g && !CAVEAT[c]);
-      const s = groupSeries(list, state.ptype);
-      const a = s.find(d => d.t === state.from), b = s.find(d => d.t === state.to);
-      const v = a && b ? `${a.v.toFixed(2)} → ${b.v.toFixed(2)}` : "–";
-      const ch = a && b ? `${fmt(100 * (b.v - a.v), 0)} points` : "";
-      const nimp = (a ? a.imp.length : 0) + (b ? b.imp.length : 0);
-      const popId = `imp-${g}`;
-      const impNote = nimp ? `<button type="button" class="imp-btn" aria-expanded="false" aria-controls="${popId}" aria-label="Partially imputed: show which countries"><span aria-hidden="true">i</span></button>
-        <div class="imp-pop" id="${popId}" role="note" hidden><strong>Partially imputed.</strong> ${[...new Set([...(a ? a.imp : []), ...(b ? b.imp : [])])].join(", ")} carried forward from their latest survey.</div>` : "";
-      return `<div class="tile"><div class="k"><span class="swatch" aria-hidden="true" style="background:${css(col)}"></span>${g} countries, average Age Group Income Ratio${nimp ? " *" : ""}</div>
-        <div class="v">${v}</div><div class="s">${label(state.ptype, state.from)} to ${label(state.ptype, state.to)} ${ch ? "· " + ch : ""}</div>${impNote}</div>`;
-    }).join("");
   }
 
   // ------------------------------------------------------------ chart 1 ----
@@ -353,14 +358,15 @@
     lay.yaxis = axis({ title: { text: "Age Group Income Ratio, 55–64 / 25–34", font: { color: css("--text-secondary") } } });
     lay.shapes = [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: 1, y1: 1, line: { color: css("--text-muted"), width: 1, dash: "dot" } }];
     lay.hovermode = "x unified";
-    if (isNarrow()) { lay.margin.r = 24; lay.margin.b = 64; lay.xaxis.automargin = true; lay.xaxis.tickangle = -40; lay.xaxis.tickfont = { size: 12, color: css("--text-secondary") }; }
+    lay.showlegend = false; lay.margin.t = 14;   // the chips above the chart are the legend
+    if (isNarrow()) { lay.yaxis.title.text = "AGIR, 55–64 / 25–34"; lay.margin.r = 24; lay.margin.b = 64; lay.xaxis.automargin = true; lay.xaxis.tickangle = -40; lay.xaxis.tickfont = { size: 12, color: css("--text-secondary") }; }
     const chartEl = $("agirChart");
     if (!traces.length) {
       Plotly.purge("agirChart");
       chartEl.innerHTML = `<p class="note empty-msg">Nothing to show: open &ldquo;Choose lines&rdquo; and tick a group average or a country.</p>`;
     } else {
       if (chartEl.querySelector(".empty-msg")) chartEl.innerHTML = "";
-      Plotly.react("agirChart", traces, lay, CONFIG);
+      Plotly.react("agirChart", traces, lay, isNarrow() ? PHONE_CONFIG : AGIR_CONFIG);
     }
     $("agirSummary").textContent = "Line chart of the Age Group Income Ratio, 55 to 64 year-olds over 25 to 34 year-olds, by period. A value above 1 means older people have the higher average income. " + summ.join(" ");
     agirTbl = tbl; renderAgirTable();
@@ -371,12 +377,12 @@
     const readMe = "<strong>How to read the chart.</strong> The dotted line marks equal incomes (ratio of 1). Vertical lines on countries" + (anyGroup() ? " and shaded bands on group averages" : "") + " are 95% confidence intervals." +
       (anyGroup() ? " Filled markers are observed values; hollow markers include carried-forward values." : "") +
       " A country line joins the surveys we observe; a period without a survey has no marker and nothing is imputed." +
-      "<br><strong>From and To</strong> also set the headline numbers above and the decomposition further down.";
+      "<br><strong>From and To</strong> also set the summary cards below the chart and the decomposition further down.";
     const groupNote = anyGroup() ? "<br>" + how : "";
     const cnotes = state.cmp.filter(c => NOTES[c]).map(c => `<br><strong>${c}${NOTE_MARK}</strong> ${noteText(c)}`).join("");
     $("agirNote").innerHTML = `<button type="button" class="imp-btn inline pill" aria-expanded="false" aria-controls="imp-agir"><span class="i" aria-hidden="true">i</span>Notes</button>` +
       `<div class="imp-pop" id="imp-agir" role="note" hidden>${readMe}${groupNote}${cnotes}</div>`;
-    renderReadLine();
+    renderReadLine(); syncUrl();
   }
 
   // ---- "What the line says": plain-language reading of one or two country lines
@@ -384,33 +390,178 @@
     "diamond": "6,0 12,6 6,12 0,6", "triangle-up": "6,0.5 12,11.5 0,11.5", "triangle-down": "0,0.5 12,0.5 6,11.5",
     "pentagon": "6,0 11.7,4.4 9.5,11.2 2.5,11.2 0.3,4.4", "hexagon": "3,0.5 9,0.5 12,6 9,11.5 3,11.5 0,6",
     "star": "6,0 7.5,4.2 12,4.4 8.5,7.2 9.7,11.6 6,9 2.3,11.6 3.5,7.2 0,4.4 4.5,4.2" };
-  const mark = (sym, col) => `<svg class="mk" viewBox="0 0 12 12" width="18" height="18" aria-hidden="true"><polygon points="${SHAPES[sym]}" fill="var(${col})"/></svg>`;
   const pct = v => Math.round(100 * (v - 1));
   const gapWords = (v, than = true) => { const p = pct(v); return p === 0 ? "about the same" + (than ? " as" : "") : `${Math.abs(p)}% ${p > 0 ? "higher" : "lower"}` + (than ? " than" : ""); };
   function renderReadLine() {
-    const sec = $("readLine");
-    if (state.cmp.length < 1 || state.cmp.length > 2) { sec.hidden = true; return; }
-    sec.hidden = false;
+    const { ptype, from, to } = state, P = t => label(ptype, t);
     const old = `<span class="chip old">55&ndash;64</span>`, young = `<span class="chip young">25&ndash;34</span>`;
-    $("readLineBody").innerHTML = state.cmp.map(c => {
-      const col = SLOT_COL[slotOf[c]], sym = SLOT_SYM[slotOf[c]];
-      const obs = agirSeries(c, state.ptype).filter(d => d.t >= state.from && d.t <= state.to);
-      const head = `<header>${mark(sym, col)}<h3>${withMark(c)}</h3></header>`;
-      if (!obs.length) return `<article class="lc" style="--lc:var(${col})">${head}<p>No survey for this country between ${label(state.ptype, state.from)} and ${label(state.ptype, state.to)}.</p></article>`;
-      const a = obs[0], z = obs[obs.length - 1];
-      const fig = (d, when) => `<div class="fig"><div class="yr">${label(state.ptype, d.t)}</div><div class="big">${d.v.toFixed(2)}</div><div class="sub">AGIR</div></div>`;
-      const edge = (d, want) => d.t !== want ? ` <span class="edge">(${want === state.from ? "first" : "last"} survey in the selected range)</span>` : "";
-      let body, delta = "";
-      if (a === z) {
-        body = `<p>In <strong>${c}</strong>, the average income of ${old} year-olds was <strong>${gapWords(a.v)}</strong> that of ${young} year-olds in ${label(state.ptype, a.t)}. That is the only survey in the selected range.</p>`;
-        return `<article class="lc" style="--lc:var(${col})">${head}<div class="pair">${fig(a)}</div>${body}</article>`;
-      }
+    const useC = state.cmp.length >= 1 && state.cmp.length <= 2;
+    const hint = $("readLineHint");
+    $("readLineTitle").textContent = useC && state.cmp.length === 1 ? "What the line says" : "What the lines say";
+    if (from >= to) { hint.hidden = false; hint.textContent = "Choose a \u201cTo\u201d period after the \u201cFrom\u201d period."; $("readLineBody").innerHTML = ""; return; }
+    hint.hidden = useC;
+    hint.textContent = useC ? "" : `Average of the countries in each group. Tick ${state.cmp.length > 2 ? "only " : ""}one or two countries in the chart above to read their lines here.`;
+    const fig = d => `<div class="fig"><div class="yr">${P(d.t)}</div><div class="big">${d.v.toFixed(2)}</div><div class="sub">AGIR${d.imp && d.imp.length ? ", partly imputed" : ""}</div></div>`;
+    const NAMES = { wage: ["wages", "m1"], employ: ["employment", "m2"], tr_inc: ["transfer income", "m3"], tr_share: ["transfer share", "m4"], other: ["other income", "m5"] };
+    const driver = (d, avgNote = "") => {
+      if (!d) return "";
+      const k = MARGINS.map(m => m.key).reduce((b, x) => (Math.abs(d[x]) > Math.abs(d[b]) ? x : b));
+      return `<p class="drv"><strong>What drove it</strong> (${P(d.from)} to ${P(d.to)}${avgNote}): the largest contribution came from <span class="mchip ${NAMES[k][1]}">${NAMES[k][0]}</span>, ` +
+        `${fmt(d[k])} percentage points per year, pushing the ratio ${d[k] > 0 ? "up" : "down"}. <a href="#decompTitle">See all components</a></p>`;
+    };
+    const card = (col, ico, title, pts, who, edge = () => "", extra = "") => {
+      const head = `<header>${ico}<h3>${title}</h3></header>`;
+      if (!pts.length) return `<article class="lc" style="--lc:var(${col})">${head}<p>No survey for this country between ${P(from)} and ${P(to)}.</p></article>`;
+      const a = pts[0], z = pts[pts.length - 1];
+      if (a === z) return `<article class="lc" style="--lc:var(${col})">${head}<div class="pair">${fig(a)}</div><p>${who}, the average income of ${old} year-olds was <strong>${gapWords(a.v)}</strong> that of ${young} year-olds in ${P(a.t)}. That is the only survey in the selected range.</p>${extra}</article>`;
       const dp = Math.round(100 * (z.v - a.v));
-      delta = dp === 0 ? "The figure is unchanged." : `A change of <strong>${dp > 0 ? "+" : "\u2212"}${Math.abs(dp)} percentage points</strong> since ${label(state.ptype, a.t)}.`;
+      const delta = dp === 0 ? "The figure is unchanged." : `A change of <strong>${dp > 0 ? "+" : "\u2212"}${Math.abs(dp)} percentage points</strong> since ${P(a.t)}.`;
       return `<article class="lc" style="--lc:var(${col})">${head}<div class="pair">${fig(a)}<span class="arrow" aria-hidden="true">&rarr;</span>${fig(z)}</div>` +
-        `<p>In <strong>${c}</strong>, the average income of ${old} year-olds was <strong>${gapWords(a.v)}</strong> that of ${young} year-olds in ${label(state.ptype, a.t)}${edge(a, state.from)}. ` +
-        `In ${label(state.ptype, z.t)}${edge(z, state.to)} it was <strong>${gapWords(z.v, false)}</strong>. ${delta}</p></article>`;
+        `<p>${who}, the average income of ${old} year-olds was <strong>${gapWords(a.v)}</strong> that of ${young} year-olds in ${P(a.t)}${edge(a, from)}. ` +
+        `In ${P(z.t)}${edge(z, to)} it was <strong>${gapWords(z.v, false)}</strong>. ${delta}</p>${extra}</article>`;
+    };
+    if (useC) {
+      const edge = (d, want) => d.t !== want ? ` <span class="edge">(${want === from ? "first" : "last"} survey in the selected range)</span>` : "";
+      $("readLineBody").innerHTML = state.cmp.map(c => card(SLOT_COL[slotOf[c]], countryIcon(c), withMark(c),
+        agirSeries(c, ptype).filter(d => d.t >= from && d.t <= to), `In <strong>${c}</strong>`, edge, driver(decomp(c, ptype, from, to)))).join("");
+      return;
+    }
+    $("readLineBody").innerHTML = GROUPS.map(([g, col]) => {
+      const s = groupSeries(countries.filter(c => groupOf(c) === g && !CAVEAT[c]), ptype);
+      const pts = [s.find(d => d.t === from), s.find(d => d.t === to)].filter(Boolean);
+      const imp = [...new Set(pts.flatMap(d => d.imp))];
+      const id = `imp-rl-${g}`;
+      const extra = imp.length ? `<button type="button" class="imp-btn" aria-expanded="false" aria-controls="${id}" aria-label="Partly imputed: show which countries"><span aria-hidden="true">i</span></button><div class="imp-pop" id="${id}" role="note" hidden><strong>Partly imputed.</strong> ${imp.join(", ")} carried forward from their latest survey.</div>` : "";
+      const ds = countries.filter(c => groupOf(c) === g && !CAVEAT[c]).map(c => decomp(c, ptype, from, to)).filter(Boolean);
+      const gd = ds.length ? Object.fromEntries(["growth", ...MARGINS.map(m => m.key)].map(k => [k, ds.reduce((s, r) => s + r[k], 0) / ds.length])) : null;
+      if (gd) { gd.from = from; gd.to = to; }
+      return card(col, groupIcon(g), `${g} average`, pts, `In the average ${g.toLowerCase()} country`, () => "", extra + driver(gd, ", average across countries"));
     }).join("");
+  }
+
+  // ------------------------------------------------------------ overview ----
+  // one row per country: the ratio in the From period (open dot) and the To period (filled dot)
+  let ovRows = [], ovAnnounce = "";
+  function renderOverview() {
+    const { ptype, from, to } = state, P = t => label(ptype, t), narrow = isNarrow();
+    $("ovPeriod").textContent = `${P(from)} and ${P(to)}`;
+    const ch = $("ovChart");
+    if (from >= to) {
+      Plotly.purge("ovChart"); ch.innerHTML = `<p class="note">Choose a \u201cTo\u201d period after the \u201cFrom\u201d period.</p>`;
+      $("ovNote").innerHTML = ""; $("ovLegend").innerHTML = ""; $("ovTableWrap").innerHTML = ""; ovRows = [];
+      $("ovSummary").textContent = ovAnnounce = "Choose a To period after the From period."; syncUrl(); return;
+    }
+    if (ch.querySelector(".note")) ch.innerHTML = "";
+    const rows = [], missing = [];
+    countries.forEach(c => {
+      const obs = agirSeries(c, ptype).filter(d => d.t >= from && d.t <= to);
+      if (!obs.length) { missing.push(c); return; }
+      const a = obs[0], z = obs[obs.length - 1];
+      rows.push({ name: c, a, z, single: a === z, moved: a.t !== from || z.t !== to });
+    });
+    const avgs = [["Middle-income", "--series-2"], ["High-income", "--series-1"]].map(([g]) => {
+      const s = groupSeries(countries.filter(c => groupOf(c) === g && !CAVEAT[c]), ptype);
+      const a = s.find(d => d.t === from), z = s.find(d => d.t === to);
+      return a && z ? { name: `${g} average`, isAvg: true, a, z, single: false, moved: false } : null;
+    }).filter(Boolean);
+    const val = { to: r => r.z.v, change: r => (r.single ? -1e9 : r.z.v - r.a.v) }[state.osort];
+    rows.sort((x, y) => state.osort === "name" ? y.name.localeCompare(x.name) : val(x) - val(y));
+    const all = [...rows, ...avgs];       // drawn bottom to top: averages at the top
+    ovRows = all.slice().reverse();
+    const muted = css("--text-muted");
+    const shortP = r => r.single ? `only ${P(r.z.t)}` : r.a.t !== from && r.z.t !== to ? `${P(r.a.t)} to ${P(r.z.t)}` : r.z.t !== to ? `to ${P(r.z.t)}` : `from ${P(r.a.t)}`;
+    const ys = all.map(r => {
+      let n = r.isAvg ? `<b>${r.name}</b>` : withMark(r.name);
+      if (narrow) n = n.replace("United Kingdom", "UK").replace("United States", "US").replace(" average", " avg");
+      n = hiLabel(r.isAvg ? null : r.name, n);
+      if (r.moved) n = `<i><span style="color:${muted}">${n}${narrow ? "" : ` (${shortP(r)})`}</span></i>`;
+      return n;
+    });
+    const up = css("--c-old"), down = css("--c-young"), flat = css("--text-secondary");
+    const dir = r => (r.single || Math.round(100 * (r.z.v - r.a.v)) === 0 ? 0 : r.z.v > r.a.v ? 1 : -1);
+    const tip = r => `<b>${r.name}${!r.isAvg && NOTES[r.name] ? NOTE_MARK : ""}</b>` + (r.single ? `<br>${P(r.z.t)}: ${r.z.v.toFixed(2)} (only survey in the range)` :
+      `<br>${P(r.a.t)}: ${r.a.v.toFixed(2)}<br>${P(r.z.t)}: ${r.z.v.toFixed(2)}<br>Change: ${fmt(100 * (r.z.v - r.a.v), 0)} percentage points`);
+    const seg = s => { const x = [], y = []; all.forEach((r, i) => { if (!r.single && dir(r) === s) { x.push(r.a.v, r.z.v, null); y.push(ys[i], ys[i], null); } }); return { x, y }; };
+    const traces = [1, -1, 0].map(s => ({ type: "scatter", mode: "lines", ...seg(s), line: { color: s > 0 ? up : s < 0 ? down : flat, width: 3 }, hoverinfo: "skip", showlegend: false }));
+    const two = all.map((r, i) => i).filter(i => !all[i].single);
+    traces.push({ type: "scatter", mode: "markers", x: two.map(i => all[i].a.v), y: two.map(i => ys[i]), text: two.map(i => tip(all[i])),
+      marker: { symbol: "circle-open", size: 9, color: flat, line: { width: 2 } }, hovertemplate: "%{text}<extra></extra>", showlegend: false });
+    traces.push({ type: "scatter", mode: "markers", x: all.map(r => r.z.v), y: ys, text: all.map(tip),
+      marker: { symbol: "circle", size: 10, color: all.map(r => (dir(r) > 0 ? up : dir(r) < 0 ? down : flat)), line: { color: css("--surface-1"), width: 1 } },
+      hovertemplate: "%{text}<extra></extra>", showlegend: false });
+    traces.push({ type: "scatter", mode: "markers", x: [1], y: [ys[0]], xaxis: "x2", marker: { opacity: 0 }, hoverinfo: "skip", showlegend: false });
+    const lay = baseLayout();
+    lay.showlegend = false; lay.hovermode = "closest";
+    lay.margin = narrow ? { l: 8, r: 12, t: 30, b: 56 } : Object.assign(lay.margin, { l: 170, t: 30 });
+    lay.height = Math.max(360, (narrow ? 21 : 24) * all.length + 100);
+    lay.xaxis = axis({ title: { text: narrow ? "AGIR" : "Age Group Income Ratio, 55–64 / 25–34", font: { color: css("--text-secondary") } } });
+    lay.xaxis2 = axis({ overlaying: "x", side: "top", matches: "x", showgrid: false, zeroline: false, showline: false });
+    // rows in sorted order (otherwise Plotly orders them by the first trace that uses them)
+    lay.yaxis = axis({ automargin: true, categoryorder: "array", categoryarray: ys, tickfont: { size: narrow ? 11 : 14, color: css("--text-primary") } });
+    lay.shapes = [{ type: "line", xref: "x", yref: "paper", x0: 1, x1: 1, y0: 0, y1: 1, line: { color: css("--text-muted"), width: 1, dash: "dot" } }];
+    Plotly.react("ovChart", traces, lay, narrow ? PHONE_CONFIG : CONFIG);
+    $("ovLegend").innerHTML = `<span><i class="seg up"></i>Rising: shifting towards 55&ndash;64</span><span><i class="seg down"></i>Falling: shifting towards 25&ndash;34</span>` +
+      `<span><i class="dot open"></i>${P(from)}</span><span><i class="dot"></i>${P(to)}</span>`;
+    const moved = rows.filter(r => r.moved), pop = [];
+    if (moved.length) pop.push(`<strong>Shorter periods</strong> (first and last survey in the range): ${moved.map(r => `${r.name} (${r.single ? "only " + P(r.z.t) : P(r.a.t) + " to " + P(r.z.t)})`).join(", ")}.`);
+    if (missing.length) pop.push(`<strong>Not shown</strong>, no survey in the range: ${missing.join(", ")}.`);
+    pop.push("Group averages carry each country&rsquo;s latest value forward when a survey is missing, so they always use the chosen periods.");
+    $("ovNote").innerHTML = (moved.length ? `<p class="note key">Names in <i>grey italics</i> use the first or last survey available in the range. Hover or tap a dot for the years.</p>` : "") +
+      `<button type="button" class="imp-btn inline pill" aria-expanded="false" aria-controls="imp-ov"><span class="i" aria-hidden="true">i</span>Notes</button><div class="imp-pop" id="imp-ov" role="note" hidden>${pop.join("<br>")}</div>`;
+    const cs = rows.filter(r => !r.single), byZ = rows.slice().sort((x, y) => y.z.v - x.z.v);
+    const nUp = cs.filter(r => dir(r) > 0).length, nDown = cs.filter(r => dir(r) < 0).length;
+    ovAnnounce = `All countries at a glance, ${P(from)} and ${P(to)}. The Age Group Income Ratio rose in ${nUp} countries and fell in ${nDown}.` +
+      (byZ.length ? ` Highest in the last period: ${byZ[0].name}, ${byZ[0].z.v.toFixed(2)}. Lowest: ${byZ[byZ.length - 1].name}, ${byZ[byZ.length - 1].z.v.toFixed(2)}.` : "");
+    $("ovSummary").textContent = `Dot chart of the Age Group Income Ratio in ${P(from)} and ${P(to)}, one row per country, with the two group averages. ${ovAnnounce} Use the Show table button for all values.`;
+    renderOvTable(); syncUrl();
+  }
+  function renderOvTable() {
+    const w = $("ovTableWrap");
+    w.hidden = !state.ovTable;
+    $("toggleOvTable").textContent = state.ovTable ? "Hide table" : "Show table";
+    $("toggleOvTable").setAttribute("aria-expanded", String(state.ovTable));
+    if (!state.ovTable) return;
+    const P = t => label(state.ptype, t);
+    const cellV = (d, want) => `${d.v.toFixed(2)}${d.t !== want ? ` <span class="per-note">(${P(d.t)})</span>` : ""}`;
+    w.innerHTML = `<table><caption class="sr-only">Age Group Income Ratio in ${P(state.from)} and ${P(state.to)}</caption><thead><tr><th scope="col">Country</th><th scope="col">${P(state.from)}</th><th scope="col">${P(state.to)}</th><th scope="col">Change, percentage points</th></tr></thead><tbody>` +
+      ovRows.map(r => `<tr class="${r.isAvg ? "group" : ""}"><th scope="row">${r.isAvg ? r.name : withMark(r.name)}</th><td>${r.single ? "&ndash;" : cellV(r.a, state.from)}</td><td>${cellV(r.z, state.to)}</td><td>${r.single ? "&ndash;" : fmt(100 * (r.z.v - r.a.v), 0)}</td></tr>`).join("") +
+      `</tbody></table><p class="note">A year in brackets: the nearest survey in the range was used.</p>`;
+  }
+
+  // ---------------------------------------------------------- shareable link ----
+  // the current choices are kept in the address (?lines=Italy,Spain&from=2004&to=2022 ...)
+  const SORTS = { grd: "", name: "name", wage: "wages", emp: "employment", trinc: "transfer-income", trshare: "transfer-share" };
+  const startYear = (pt, t) => (pt === "wave" ? 2004 + 3 * (t - 1) : t);
+  const fromYear = (pt, y) => (pt === "wave" ? Math.floor((y - 2004) / 3) + 1 : y);
+  let urlReady = false;
+  function syncUrl() {
+    if (!urlReady) return;
+    const p = [], dFrom = state.ptype === "wave" ? 1 : 2004, dTo = state.ptype === "wave" ? 7 : 2022;
+    if (state.cmp.length) p.push("lines=" + state.cmp.map(encodeURIComponent).join(","));
+    const g = GROUPS.filter(([x]) => state.grp[x]).map(([x]) => x === "High-income" ? "high" : "middle");
+    if (g.length < 2) p.push("averages=" + (g.length ? g[0] : "none"));
+    if (state.ptype === "year") p.push("periods=years");
+    if (state.from !== dFrom) p.push("from=" + startYear(state.ptype, state.from));
+    if (state.to !== dTo) p.push("to=" + startYear(state.ptype, state.to));
+    if (state.osort !== "to") p.push("rank=" + state.osort);
+    if (state.group !== "all") p.push("drivers=" + (state.group === "High-income" ? "high" : "middle"));
+    if (SORTS[state.sort]) p.push("sort=" + SORTS[state.sort]);
+    const url = location.pathname + (p.length ? "?" + p.join("&") : "") + location.hash;
+    if (url !== location.pathname + location.search + location.hash) history.replaceState(null, "", url);
+  }
+  function readUrl() {
+    const q = new URLSearchParams(location.search);
+    if (q.get("periods") === "years") { state.ptype = "year"; state.from = 2004; state.to = 2022; $("ptype").value = "year"; }
+    const ps = periodsAvailable(state.ptype);
+    ["from", "to"].forEach(k => { const y = parseInt(q.get(k), 10); if (y && ps.includes(fromYear(state.ptype, y))) state[k] = fromYear(state.ptype, y); });
+    (q.get("lines") || "").split(",").map(s => s.trim()).filter(c => countries.includes(c)).forEach(c => setCountry(c, true));
+    const av = q.get("averages");
+    if (av) { state.grp["High-income"] = av === "high"; state.grp["Middle-income"] = av === "middle"; }
+    if (["change", "name"].includes(q.get("rank"))) { state.osort = q.get("rank"); $("osort").value = state.osort; }
+    const dr = q.get("drivers");
+    if (dr === "high" || dr === "middle") { state.group = dr === "high" ? "High-income" : "Middle-income"; $("group").value = state.group; }
+    const so = Object.keys(SORTS).find(k => SORTS[k] && SORTS[k] === q.get("sort"));
+    if (so) { state.sort = so; $("sort").value = so; }
   }
 
   function renderAgirTable() {
@@ -456,53 +607,63 @@
     const parts = avgs.slice().reverse().map(r => `${r.country} average: total ${fmt(r.growth)} percentage points per year (wages ${fmt(r.wage)}, employment ${fmt(r.employ)}, transfer income ${fmt(r.tr_inc)}, transfer share ${fmt(r.tr_share)}, other income ${fmt(r.other)}).`);
     const byG = res.slice().sort((a, b) => b.growth - a.growth);
     const ext = byG.length ? ` Among the ${byG.length} countries shown, the total ranges from ${fmt(byG[byG.length - 1].growth)} (${byG[byG.length - 1].country}) to ${fmt(byG[0].growth)} (${byG[0].country}).` : "";
-    $("decompSummary").textContent = `Bar chart, ${label(ptype, from)} to ${label(ptype, to)}, of the annual growth rate differential between people aged 55 to 64 and 25 to 34, split into wages, employment, transfer income, transfer share and other income, in percentage points per year. Positive values widen the gap in favour of the old. ${parts.join(" ")}${ext} Use the Show table button for all values.`;
+    $("decompSummary").textContent = `Bar chart, ${label(ptype, from)} to ${label(ptype, to)}, of the annual growth rate differential between people aged 55 to 64 and 25 to 34, split into wages, employment, transfer income, transfer share and other income, in percentage points per year. Positive values mean the Age Group Income Ratio is rising, so income is shifting towards 55 to 64 year-olds. ${parts.join(" ")}${ext} Use the Show table button for all values.`;
     decompAnnounce = `What drove the change, ${label(ptype, from)} to ${label(ptype, to)}. ${parts.join(" ")}`;
     const all = [...res, ...avgs];   // plotted bottom-to-top, so averages appear on top
     current = [...avgs.slice().reverse(), ...res.slice().reverse()];
+    // rows that had to use a shorter period (a survey is missing) get grey italic names
+    res.forEach(r => { r.moved = r.from !== from || r.to !== to; });
+    const shortP = r => r.from !== from && r.to !== to ? `${label(ptype, r.from)} to ${label(ptype, r.to)}` : r.to !== to ? `to ${label(ptype, r.to)}` : `from ${label(ptype, r.from)}`;
+    const muted = css("--text-muted");
     const yname = r => {   // on phones the label column is kept narrow so the bars get the room
-      const n = r.isAvg ? `<b>${r.country}</b>` : withMark(r.country);
-      return isNarrow() ? n.replace("United Kingdom", "UK").replace("United States", "US") : n;
+      let n = r.isAvg ? `<b>${r.country}</b>` : withMark(r.country);
+      if (isNarrow()) n = n.replace("United Kingdom", "UK").replace("United States", "US");
+      n = hiLabel(r.isAvg ? null : r.country, n);
+      if (r.moved) n = `<i><span style="color:${muted}">${n}${isNarrow() ? "" : ` (${shortP(r)})`}</span></i>`;
+      return n;
     };
     const ys = all.map(yname);
+    labelRows = {};
+    all.forEach((r, i) => { labelRows[plainLabel(ys[i])] = r; });
     const span = all.map(r => [r.isAvg ? "group average" : `${label(ptype, r.from)} to ${label(ptype, r.to)}`,
       ""]);
     const traces = MARGINS.map(m => ({
       type: "bar", orientation: "h", name: m.label, y: ys, x: all.map(r => r[m.key]),
       customdata: all.map((r, j) => [...span[j], fmt(r[m.key])]),
       marker: { color: css(m.color), line: { color: css("--surface-1"), width: 1 } },
-      hovertemplate: `<b>%{y}</b><br>${m.label}: %{customdata[2]} pp/yr<extra></extra>`
+      hovertemplate: `<b>${"%{y}"}</b><br>%{customdata[0]}<br>${m.label}: %{customdata[2]} pp/yr<extra></extra>`
     }));
     traces.push({ type: "scatter", mode: "markers", name: "Total (GRD)", y: ys, x: all.map(r => r.growth), customdata: all.map((r, j) => [...span[j], fmt(r.growth)]),
       marker: { symbol: "diamond", size: 10, color: css("--total"), line: { color: css("--surface-1"), width: 2 } },
-      hovertemplate: `<b>%{y}</b><br>Total GRD: %{customdata[2]} pp/yr<extra></extra>` });
+      hovertemplate: `<b>%{y}</b><br>%{customdata[0]}<br>Total GRD: %{customdata[2]} pp/yr<extra></extra>` });
     const lay = baseLayout();
     lay.barmode = "relative"; lay.bargap = 0.3;
     const narrow = isNarrow();
     // on phones the labels get only the room they need, so the bars use the full width
-    lay.margin = narrow ? { l: 8, r: 8, t: 36, b: 56 } : Object.assign(lay.margin, { l: 170 });
-    lay.height = Math.max(360, (narrow ? 28 : 26) * all.length + 130);
-    lay.legend.font.size = narrow ? 12 : 14;
-    // on phones the legend is plain HTML above the chart, so it can use the full width
-    lay.showlegend = !narrow;
-    if (narrow) lay.margin.t = 8;
+    lay.margin = narrow ? { l: 8, r: 8, t: 30, b: 56 } : Object.assign(lay.margin, { l: 170, t: 30 });
+    lay.height = Math.max(360, (narrow ? 28 : 26) * all.length + 100);
+    // the legend is plain HTML above the chart, so it can use the full width and leave room for the top scale
+    lay.showlegend = false;
     const lg = $("decompLegend");
-    lg.hidden = !narrow;
     lg.innerHTML = MARGINS.map(m => `<span><i class="sw" style="background:${css(m.color)}"></i>${m.label}</span>`).join("") +
       `<span><i class="dia"></i>Total (GRD)</span>`;
 
     lay.xaxis = axis({ title: { text: "percentage points per year", font: { color: css("--text-secondary") } }, zeroline: true, zerolinewidth: 1.5 });
+    // the chart is tall, so the scale is repeated at the top
+    lay.xaxis2 = axis({ overlaying: "x", side: "top", matches: "x", showgrid: false, zeroline: false, showline: false });
+    traces.push({ type: "scatter", mode: "markers", x: [0], y: [ys[0]], xaxis: "x2", marker: { opacity: 0 }, hoverinfo: "skip", showlegend: false });
     lay.yaxis = axis({ automargin: true, tickfont: { size: narrow ? 11 : 14, color: css("--text-primary") } });
     lay.hovermode = "closest";
-    Plotly.react("decompChart", traces, lay, CONFIG);
-    const notes = [];
-    const moved = res.filter(r => r.from !== from || r.to !== to);
-    if (moved.length) notes.push(`Nearest available periods used for: ${moved.map(r => `${r.country} (${label(ptype, r.from)} to ${label(ptype, r.to)})`).join(", ")}.`);
-    if (missing.length) notes.push(`Not shown, ${state.exact ? "no data in both periods" : "fewer than two periods in the range"}: ${missing.join(", ")}.`);
+    Plotly.react("decompChart", traces, lay, narrow ? PHONE_CONFIG : CONFIG);
+    const moved = res.filter(r => r.moved);
+    const pop = [];
+    if (moved.length) pop.push(`<strong>Shorter periods</strong> (nearest surveys available): ${moved.map(r => `${r.country} (${label(ptype, r.from)} to ${label(ptype, r.to)})`).join(", ")}.`);
+    if (missing.length) pop.push(`<strong>Not shown</strong>, fewer than two periods in the range: ${missing.join(", ")}.`);
     const noted = res.filter(r => NOTES[r.country]).map(r => r.country);
-    if (noted.length) notes.push(`${NOTE_MARK} Country notes apply to: ${noted.join(", ")} (hover or tap the country name, or <a href="#country-notes" class="notes-link">read the country notes</a>).`);
-    $("missingNote").innerHTML = notes.join(" ");
-    renderTable();
+    if (noted.length) pop.push(`<strong>${NOTE_MARK} Country notes</strong> apply to: ${noted.join(", ")}. Hover or tap the country name, or <a href="#country-notes" class="notes-link">read the country notes</a>.`);
+    $("missingNote").innerHTML = (moved.length ? `<p class="note key">Names in <i>grey italics</i> use a shorter period, because a survey is missing in the chosen one. Hover or tap the name or bar for the years.</p>` : "") +
+      (pop.length ? `<button type="button" class="imp-btn inline pill" aria-expanded="false" aria-controls="imp-decomp"><span class="i" aria-hidden="true">i</span>Notes</button><div class="imp-pop" id="imp-decomp" role="note" hidden>${pop.join("<br>")}</div>` : "");
+    renderTable(); syncUrl();
   }
 
   function renderTable() {
@@ -513,8 +674,27 @@
     if (!state.table) return;
     const cols = [["growth", "Total GRD"], ...MARGINS.map(m => [m.key, m.label])];
     wrap.innerHTML = `<table><caption class="sr-only">Decomposition of the growth rate differential, percentage points per year</caption><thead><tr><th scope="col">Country</th><th scope="col" class="per">Periods</th>${cols.map(c => `<th scope="col">${c[1]}</th>`).join("")}</tr></thead><tbody>` +
-      current.map(r => `<tr class="${r.isAvg ? "group" : ""}"><td>${r.country}</td><td class="per">${r.isAvg ? "" : label(state.ptype, r.from) + " to " + label(state.ptype, r.to)}</td>${cols.map(c => `<td>${fmt(r[c[0]])}</td>`).join("")}</tr>`).join("") +
+      current.map(r => `<tr class="${r.isAvg ? "group" : ""}"><td>${r.country}${r.moved ? `<span class="per-sub">${label(state.ptype, r.from)} to ${label(state.ptype, r.to)}</span>` : ""}</td><td class="per${r.moved ? " short" : ""}">${r.isAvg ? "" : label(state.ptype, r.from) + " to " + label(state.ptype, r.to)}</td>${cols.map(c => `<td>${fmt(r[c[0]])}</td>`).join("")}</tr>`).join("") +
       `</tbody></table><p class="note">Percentage points per year.</p>`;
+  }
+
+  // save a text file (UTF-8 with BOM, so spreadsheet programs show the dashes correctly)
+  function saveCsv(text, name) {
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob(["\ufeff" + text], { type: "text/csv;charset=utf-8" }));
+    a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+  }
+  // Age Group Income Ratio for every country (observed) and both group averages, current period type
+  function downloadAgir() {
+    const pt = state.ptype, out = ["series,type,income_group,periods,period,agir,se,ci95_low,ci95_high,carried_forward"];
+    const line = (name, type, g, d, cf) => [`"${name}"`, type, g, pt === "wave" ? "3-year waves" : "single years", label(pt, d.t),
+      d.v.toFixed(4), d.se.toFixed(4), (d.v - 1.96 * d.se).toFixed(4), (d.v + 1.96 * d.se).toFixed(4), `"${cf}"`].join(",");
+    GROUPS.forEach(([g]) => groupSeries(countries.filter(c => groupOf(c) === g && !CAVEAT[c]), pt)
+      .forEach(d => out.push(line(`${g} average`, "group average", g, d, d.imp.join("; ")))));
+    countries.forEach(c => agirSeries(c, pt).forEach(d => out.push(line(c, "country", groupOf(c), d, ""))));
+    saveCsv(out.join("\n"), `age_group_income_ratio_${pt === "wave" ? "waves" : "years"}.csv`);
   }
 
   function download() {
@@ -522,29 +702,27 @@
     const csv = ["country,group,from,to," + cols.map(c => c === "growth" ? "grd" : c).join(",")]
       .concat(current.map(r => [`"${r.country}"`, r.group, r.isAvg ? label(state.ptype, state.from) : label(state.ptype, r.from), r.isAvg ? label(state.ptype, state.to) : label(state.ptype, r.to),
         ...cols.map(c => r[c].toFixed(4))].join(","))).join("\n");
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
-    a.download = `agir_decomposition_${state.from}_${state.to}.csv`;
-    a.click();
-    URL.revokeObjectURL(a.href);
+    saveCsv(csv, `agir_decomposition_${label(state.ptype, state.from)}_to_${label(state.ptype, state.to)}.csv`.replace(/\u2013/g, "-"));
   }
 
   // ------------------------------------------------- notes on country names ----
-  const FULL = { UK: "United Kingdom", US: "United States" };
+  let labelRows = {};
+  const plainLabel = s => s.replace(/<[^>]+>/g, "").replace(/\s+/g, " ").trim();
   const tip = $("noteTip"), decompEl = $("decompChart");
   function labelAt(x, y) {
     for (const t of decompEl.querySelectorAll(".ytick text")) {
-      if (!t.textContent.includes(NOTE_MARK)) continue;
-      const r = t.getBoundingClientRect();
-      if (x >= r.left - 6 && x <= r.right + 6 && y >= r.top - 3 && y <= r.bottom + 3) {
-        const n = t.textContent.replace(NOTE_MARK, "").trim();
-        return NOTES[FULL[n] || n] ? FULL[n] || n : null;
-      }
+      const r = labelRows[plainLabel(t.textContent)];
+      if (!r || r.isAvg || !(NOTES[r.country] || r.moved)) continue;
+      const b = t.getBoundingClientRect();
+      if (x >= b.left - 6 && x <= b.right + 6 && y >= b.top - 3 && y <= b.bottom + 3) return r;
     }
     return null;
   }
-  function showTip(c, x, y) {
-    tip.innerHTML = `<strong>${c}${NOTE_MARK}</strong> ${noteText(c)}`;
+  function showTip(r, x, y) {
+    const c = r.country;
+    tip.innerHTML = `<strong>${withMark(c)}</strong>` +
+      (r.moved ? ` Shorter period: ${label(state.ptype, r.from)} to ${label(state.ptype, r.to)}, the nearest surveys available.` : "") +
+      (NOTES[c] ? ` ${noteText(c)}` : "");
     tip.hidden = false;
     const w = tip.offsetWidth, h = tip.offsetHeight;
     tip.style.left = Math.max(8, Math.min(x + 14, window.innerWidth - w - 8)) + "px";
@@ -562,20 +740,37 @@
   document.addEventListener("keydown", e => { if (e.key === "Escape") hideTip(); });
 
   // ---------------------------------------------------------------- wire ----
-  function renderAll() { renderTiles(); renderAgir(); renderDecomp(); }
+  function renderAll() { renderAgir(); renderOverview(); renderDecomp(); }
   $("ptype").addEventListener("change", e => {
     state.ptype = e.target.value;
     if (state.ptype === "year") { state.from = 2004; state.to = 2022; } else { state.from = 1; state.to = 7; }
     fillPeriods(); renderAll(); announce(decompAnnounce);
   });
-  $("from").addEventListener("change", e => { state.from = +e.target.value; renderTiles(); renderDecomp(); announce(decompAnnounce); });
-  $("to").addEventListener("change", e => { state.to = +e.target.value; renderTiles(); renderDecomp(); announce(decompAnnounce); });
+  $("from").addEventListener("change", e => { state.from = +e.target.value; renderReadLine(); renderOverview(); renderDecomp(); announce(decompAnnounce); });
+  $("to").addEventListener("change", e => { state.to = +e.target.value; renderReadLine(); renderOverview(); renderDecomp(); announce(decompAnnounce); });
   $("group").addEventListener("change", e => { state.group = e.target.value; renderDecomp(); announce(decompAnnounce); });
   $("sort").addEventListener("change", e => { state.sort = e.target.value; renderDecomp(); announce(decompAnnounce); });
+  $("osort").addEventListener("change", e => { state.osort = e.target.value; renderOverview(); announce(ovAnnounce); });
+  $("toggleOvTable").addEventListener("click", () => { state.ovTable = !state.ovTable; renderOvTable(); });
+  $("downloadAgir").addEventListener("click", downloadAgir);
+  $("copyLink").addEventListener("click", () => {
+    const btn = $("copyLink"), box = $("linkBox"), url = location.href;
+    const done = () => { btn.textContent = "Link copied"; announce("Link to this view copied."); setTimeout(() => { btn.textContent = "Copy link"; }, 2000); };
+    const fallback = () => { box.hidden = false; box.value = url; box.focus(); box.select(); announce("Copy the selected link."); };
+    navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(url).then(done, fallback) : fallback();
+  });
+  function copyText(text, msg) {
+    const s = $("citeStatus");
+    const ok = () => { s.textContent = msg; setTimeout(() => { s.textContent = ""; }, 2500); };
+    const fail = () => { s.textContent = "Copying is blocked here: select the text and copy it."; };
+    navigator.clipboard && navigator.clipboard.writeText ? navigator.clipboard.writeText(text).then(ok, fail) : fail();
+  }
+  $("copyCite").addEventListener("click", () => copyText($("citeText").textContent.replace(/\s+/g, " ").trim(), "Citation copied."));
+  $("copyBib").addEventListener("click", () => copyText($("bibText").textContent, "BibTeX copied."));
   $("toggleTable").addEventListener("click", () => { state.table = !state.table; renderTable(); });
   $("toggleAgirTable").addEventListener("click", () => { state.agirTable = !state.agirTable; renderAgirTable(); });
   $("download").addEventListener("click", download);
-  // small "i" button on a tile opens/closes the imputation note (click outside or Escape closes it)
+  // small "i" buttons open/close the imputation note (click outside or Escape closes it)
   function closePops(except) {
     document.querySelectorAll(".imp-pop").forEach(p => {
       if (p === except) return;
@@ -612,11 +807,13 @@
   let wasNarrow = isNarrow(), resizeTimer;
   window.addEventListener("resize", () => {
     clearTimeout(resizeTimer);
-    resizeTimer = setTimeout(() => { if (isNarrow() !== wasNarrow) { wasNarrow = isNarrow(); renderAgir(); renderDecomp(); } }, 200);
+    resizeTimer = setTimeout(() => { if (isNarrow() !== wasNarrow) { wasNarrow = isNarrow(); renderAll(); } }, 200);
   });
   window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", renderAll);
 
   $("countryNotes").innerHTML = Object.keys(NOTES).sort().map(c =>
     `<p><strong>${c}${NOTE_MARK}</strong> ${noteText(c)}</p>`).join("");
-  fillPeriods(); wirePicker(); renderAll();
+  if (!isNarrow()) { $("readMore").open = true; $("defs").open = true; }
+  readUrl();
+  fillPeriods(); wirePicker(); urlReady = true; renderAll();
 })();
