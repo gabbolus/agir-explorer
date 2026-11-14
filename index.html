@@ -23,9 +23,10 @@
   <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-  <link rel="stylesheet" href="assets/style.css?v=20261027d">
-  <script src="https://cdn.jsdelivr.net/npm/plotly.js-basic-dist-min@2.35.2/plotly-basic.min.js"></script>
-  <script src="data/agir_data.js?v=20261027d"></script>
+  <link rel="stylesheet" href="assets/style.css?v=20261114a">
+  <link rel="preload" href="assets/plotly-basic.min.js" as="script">
+  <script defer src="assets/plotly-basic.min.js"></script>
+  <script defer src="data/agir_data.js?v=20261114a"></script>
 </head>
 <body>
 <div class="viz-root">
@@ -33,27 +34,29 @@
   <header class="page-head">
     <h1>Age Group Income Ratio Explorer</h1>
     <p class="lede">How does the income of people aged 55&ndash;64 compare with that of people aged 25&ndash;34? Explore 37 countries from 2004 to 2024, and see which sources of income drove the change.</p>
-    <p class="lede ref">Based on Guaitoli, G. and Pancrazi, R. (2026), &ldquo;Age-Income Gaps: The Role of Skill Congestion&rdquo;, <em>European Economic Review</em>, 188, 105408, <a href="https://doi.org/10.1016/j.euroecorev.2026.105408" target="_blank" rel="noopener">doi:10.1016/j.euroecorev.2026.105408</a>. The dashboard extends the paper&rsquo;s data beyond 2018. <a href="#cite">How to cite</a></p>
+    <p class="lede ref">Based on Guaitoli and Pancrazi (2026), <em>European Economic Review</em>, 188, 105408 (<a class="ext" href="https://doi.org/10.1016/j.euroecorev.2026.105408" target="_blank" rel="noopener">doi</a>). Data extended beyond 2018. <a href="#cite">How to cite</a></p>
   </header>
+  <nav class="jump" aria-label="Jump to a section"><a href="#charts">Over time</a><a href="#overview">All countries</a><a href="#drivers">What drove it</a><a href="#methods">Methods</a><a href="#cite">Cite</a></nav>
 
 <main id="main">
   <p id="status" class="sr-only" role="status" aria-live="polite"></p>
 
   <section class="readbox" aria-labelledby="readTitle">
     <h2 id="readTitle">How to read this dashboard</h2>
-    <div class="formula">
-      <span class="chip agir">AGIR</span>
-      <span class="eq" aria-hidden="true">=</span>
-      <span class="frac">
-        <span class="num"><span class="lg">average income of people aged</span><span class="sm">average income,</span> <span class="chip old">55&ndash;64</span></span>
-        <span class="den"><span class="lg">average income of people aged</span><span class="sm">average income,</span> <span class="chip young">25&ndash;34</span></span>
-      </span>
+    <div class="strip">
+      <div class="formula">
+        <span class="chip agir">AGIR</span>
+        <span class="eq" aria-hidden="true">=</span>
+        <span class="frac">
+          <span class="num"><span class="lg">average income of people aged</span><span class="sm">average income,</span> <span class="chip old">55&ndash;64</span></span>
+          <span class="den"><span class="lg">average income of people aged</span><span class="sm">average income,</span> <span class="chip young">25&ndash;34</span></span>
+        </span>
+      </div>
+      <p class="example">An <strong>Age Group Income Ratio</strong> of <strong>1.20</strong> means <span class="chip old">55&ndash;64</span> year-olds have, on average, 20% more income than <span class="chip young">25&ndash;34</span> year-olds in the same year.</p>
     </div>
-    <p class="same">Both are averages over everyone in the age group, measured in the same year.</p>
-    <p class="example"><strong>AGIR</strong> is the <strong>Age Group Income Ratio</strong>. An AGIR of <strong>1.20</strong> means that today&rsquo;s <span class="chip old">55&ndash;64</span> year-olds have, on average, 20% more income than today&rsquo;s <span class="chip young">25&ndash;34</span> year-olds.</p>
-    <p class="callout"><span class="x" aria-hidden="true">&#10005;</span><span><strong>Not &ldquo;the young are getting poorer&rdquo;.</strong> The ratio can rise while the income of 25&ndash;34 year-olds also rises, if the income of 55&ndash;64 year-olds rises faster.</span></p>
     <details class="more" id="readMore">
-      <summary>Read more: what the ratio shows and what is measured</summary>
+      <summary>More: what the ratio shows and what is measured</summary>
+      <p class="callout"><span class="x" aria-hidden="true">&#10005;</span><span><strong>Not &ldquo;the young are getting poorer&rdquo;.</strong> The ratio can rise while the income of 25&ndash;34 year-olds also rises, if the income of 55&ndash;64 year-olds rises faster.</span></p>
       <div class="compare">
         <div class="col yes">
           <h3><span aria-hidden="true">&#10003;</span> What it shows</h3>
@@ -64,7 +67,7 @@
           <p><strong>Not an age-income profile.</strong> Today&rsquo;s <span class="chip old">55&ndash;64</span> year-olds are not today&rsquo;s <span class="chip young">25&ndash;34</span> year-olds grown older, so the ratio does not say how a person&rsquo;s income grows with age.</p>
         </div>
       </div>
-  <p class="scope"><strong>What is measured.</strong> All people in each age group, working or not. Income is labour income plus pensions and other transfers, net of income taxes. Capital income and wealth are not observed, so the gap is likely understated in high-income countries (a lower bound). Changes in surveys can also move the numbers; countries affected are marked &dagger;.</p>
+      <p class="scope"><strong>What is measured.</strong> All people in each age group, working or not. Income is labour income plus pensions and other transfers, net of income taxes. Capital income and wealth are not observed, so the gap is likely understated in high-income countries (a lower bound). Changes in surveys can also move the numbers; countries affected are marked &dagger;.</p>
     </details>
   </section>
 
@@ -87,7 +90,7 @@
             <div class="p-foot"><span id="pickCount" aria-live="polite"></span><button id="pickDone" type="button" class="primary">Done</button></div>
           </div>
         </div>
-        <button id="toggleAgirTable" type="button" aria-expanded="false" aria-controls="agirTableWrap">Show table</button>
+        <button id="toggleAgirTable" type="button" aria-expanded="false" aria-controls="agirTableWrap">Show data table</button>
         <button id="downloadAgir" type="button" title="Age Group Income Ratio for every country and both group averages">Download CSV</button>
         <button id="copyLink" type="button" title="Copy a link that opens the dashboard with your current choices">Copy link</button>
         <input id="linkBox" class="linkbox" type="text" readonly aria-label="Link to this view" hidden>
@@ -104,9 +107,14 @@
     <label>From <select id="from"></select></label>
     <label>To <select id="to"></select></label>
   </section>
-    <div id="agirChart" class="chart" role="img" aria-labelledby="agirTitle" aria-describedby="agirSummary"></div>
+    <div id="agirChart" class="chart loading" role="img" aria-labelledby="agirTitle" aria-describedby="agirSummary"></div>
     <p id="agirSummary" class="sr-only"></p>
     <div id="agirTableWrap" class="table-wrap" hidden></div>
+  </section>
+
+  <section class="card keyf" id="keyFind" aria-labelledby="keyFindTitle" hidden>
+    <h2 id="keyFindTitle">Key findings</h2>
+    <ul id="keyFindList"></ul>
   </section>
 
   <section class="card readline" id="readLine" aria-labelledby="readLineTitle">
@@ -118,13 +126,14 @@
 
   <section class="card" id="overview" aria-labelledby="ovTitle">
     <div class="card-head">
-      <div><h2 id="ovTitle">All countries at a glance</h2><p class="period" id="ovPeriod"></p></div>
+      <div><h2 id="ovTitle">All countries at a glance</h2><p class="period"><span id="ovPeriod"></span> <button type="button" class="linkbtn goperiods">Change periods</button></p></div>
       <div class="btns">
-        <button id="toggleOvTable" type="button" aria-expanded="false" aria-controls="ovTableWrap">Show table</button>
+        <button id="toggleOvTable" type="button" aria-expanded="false" aria-controls="ovTableWrap">Show data table</button>
+        <button id="pngOv" type="button" title="Save this chart as an image">Download PNG</button>
       </div>
     </div>
     <p class="note ov-lede">Each row shows a country&rsquo;s Age Group Income Ratio in the two periods chosen above. Right of the dotted line (1), <span class="chip old">55&ndash;64</span> year-olds have the higher average income; left of it, <span class="chip young">25&ndash;34</span> year-olds do.</p>
-  <section class="controls" id="controls3" aria-label="Countries and sorting">
+  <section class="controls" id="controls3" aria-label="Overview chart: countries and sorting">
     <div class="picker sub" id="ovPicker"></div>
     <label>Sort
       <select id="osort">
@@ -136,17 +145,18 @@
   </section>
     <div class="notesrow" id="ovNote"></div>
     <div id="ovLegend" class="legend" aria-hidden="true"></div>
-    <div id="ovChart" class="chart" role="img" aria-labelledby="ovTitle" aria-describedby="ovSummary"></div>
+    <div id="ovChart" class="chart loading" role="img" aria-labelledby="ovTitle" aria-describedby="ovSummary"></div>
     <p id="ovSummary" class="sr-only"></p>
     <div id="ovTableWrap" class="table-wrap" hidden></div>
   </section>
 
 
-  <section class="card">
+  <section class="card" id="drivers" aria-labelledby="decompTitle">
     <div class="card-head">
-      <div><h2 id="decompTitle">What drove the change?</h2><p class="period" id="decompPeriod"></p></div>
+      <div><h2 id="decompTitle">What drove the change?</h2><p class="period"><span id="decompPeriod"></span> <button type="button" class="linkbtn goperiods">Change periods</button></p></div>
       <div class="btns">
-        <button id="toggleTable" type="button" aria-expanded="false" aria-controls="tableWrap">Show table</button>
+        <button id="toggleTable" type="button" aria-expanded="false" aria-controls="tableWrap">Show data table</button>
+        <button id="pngDr" type="button" title="Save this chart as an image">Download PNG</button>
         <button id="download" type="button">Download CSV</button>
       </div>
     </div>
@@ -160,7 +170,7 @@
     <p class="same">Income growth is the change in average income between the two chosen periods, as a percentage of initial income, per year. GRD stands for Growth Rate Differential and is measured in percentage points per year.</p>
     <p class="drivers">Income growth depends on the change in <span class="mchip m1">wages</span> and <span class="mchip m2">employment</span>, plus changes in <span class="mchip m3">transfer income</span> per recipient and the <span class="mchip m4">share</span> of transfer recipients.</p>
     <p class="note sign">A positive GRD means the Age Group Income Ratio is rising, by roughly that many per cent per year: income is shifting towards <span class="chip old">55&ndash;64</span> year-olds. A negative GRD means it is shifting towards <span class="chip young">25&ndash;34</span> year-olds. The black diamond is the total; each coloured bar is one component&rsquo;s contribution.</p>
-  <section class="controls" id="controls2" aria-label="Countries and sorting">
+  <section class="controls" id="controls2" aria-label="Drivers chart: countries and sorting">
     <div class="picker sub" id="drPicker"></div>
     <label>Sort
       <select id="sort">
@@ -175,38 +185,39 @@
   </section>
     <div class="notesrow" id="missingNote"></div>
     <div id="decompLegend" class="legend" aria-hidden="true"></div>
-    <div id="decompChart" class="chart" role="img" aria-labelledby="decompTitle" aria-describedby="decompSummary"></div>
+    <div id="decompChart" class="chart loading" role="img" aria-labelledby="decompTitle" aria-describedby="decompSummary"></div>
+    <p class="moreRows" id="drMore"></p>
     <p id="decompSummary" class="sr-only"></p>
     <div id="tableWrap" class="table-wrap" hidden></div>
     <details class="defs" id="defs">
       <summary>What each colour means</summary>
       <p class="note">Each component compares the two age groups. Positive means 55&ndash;64 year-olds gain more (or lose less) than 25&ndash;34 year-olds on that component; negative means 25&ndash;34 year-olds do better.</p>
       <div class="mcards">
-        <div class="mcard" style="--c: var(--series-1)">
+        <div class="mcard" style="--c: var(--m-wage)">
           <h3><span class="mchip m1">Wages</span></h3>
           <p><span class="lab">What it is</span> How much the pay of people who have a job changes (net labour income per employed person).</p>
           <p><span class="lab pos">Positive when</span> employed 55&ndash;64 year-olds&rsquo; pay grows faster than employed 25&ndash;34 year-olds&rsquo; pay.</p>
           <p><span class="lab neg">Negative when</span> the pay of employed 25&ndash;34 year-olds grows faster.</p>
         </div>
-        <div class="mcard" style="--c: var(--series-2)">
+        <div class="mcard" style="--c: var(--m-emp)">
           <h3><span class="mchip m2">Employment</span></h3>
           <p><span class="lab">What it is</span> How the share of people in work changes, valued at what a worker earned at the start.</p>
           <p><span class="lab pos">Positive when</span> the share of 55&ndash;64 year-olds in work rises faster than the share of 25&ndash;34 year-olds (for example, older people retiring later).</p>
           <p><span class="lab neg">Negative when</span> the employment rate of 25&ndash;34 year-olds rises faster.</p>
         </div>
-        <div class="mcard" style="--c: var(--series-3)">
+        <div class="mcard" style="--c: var(--m-trinc)">
           <h3><span class="mchip m3">Transfer income</span></h3>
           <p><span class="lab">What it is</span> How the size of the average transfer (pensions and other benefits) changes for those who receive one.</p>
           <p><span class="lab pos">Positive when</span> the average benefit of 55&ndash;64 year-olds grows faster than that of 25&ndash;34 year-olds.</p>
           <p><span class="lab neg">Negative when</span> the average benefit of 25&ndash;34 year-olds grows faster.</p>
         </div>
-        <div class="mcard" style="--c: var(--series-4)">
+        <div class="mcard" style="--c: var(--m-trsh)">
           <h3><span class="mchip m4">Transfer share</span></h3>
           <p><span class="lab">What it is</span> How the share of people receiving any transfer changes, valued at the average transfer at the start.</p>
           <p><span class="lab pos">Positive when</span> the share of 55&ndash;64 year-olds receiving transfers rises faster (or falls more slowly) than that of 25&ndash;34 year-olds.</p>
           <p><span class="lab neg">Negative when</span> the share of 25&ndash;34 year-olds rises faster.</p>
         </div>
-        <div class="mcard" style="--c: var(--series-5)">
+        <div class="mcard" style="--c: var(--m-oth)">
           <h3><span class="mchip m5">Other income</span></h3>
           <p><span class="lab">What it is</span> Everything not captured by the four components above, such as labour income of people not classified as employed.</p>
           <p><span class="lab pos">Positive when</span> this part of income grows faster for 55&ndash;64 year-olds than for 25&ndash;34 year-olds.</p>
@@ -216,14 +227,14 @@
     </details>
   </section>
 
-  <details class="card methods">
+  <details class="card methods" id="methods">
     <summary>Data and methods</summary>
-    <p><strong>Data.</strong> Luxembourg Income Study (LIS) Database, all waves available in October 2026, accessed through LISSY. The sample covers 37 countries with individual-level income from 2004 onwards. South Africa is shown with a caveat: its survey changed in 2023.</p>
+    <p><strong>Data.</strong> Luxembourg Income Study (LIS) Database, all waves available in October 2026, accessed through LISSY. The sample covers 37 countries with individual-level income from 2004 onwards.</p>
     <p><strong>Income.</strong> Disposable income is personal labour income plus transfers (pensions, unemployment, family and education benefits), net of personal income taxes. Values are in constant prices.</p>
     <p><strong>Waves.</strong> 2004&ndash;06, 2007&ndash;09, &hellip;, 2022&ndash;24. Each annual survey in a wave gets equal weight. The wave value of the Age Group Income Ratio is the mean of its annual values. Growth between waves is annualised using the average survey year of each wave.</p>
     <p><strong>Decomposition.</strong> Average income of an age group is <em>y = e&middot;w + p&middot;&Theta; + other</em>, where <em>e</em> is the employment rate, <em>w</em> is net labour income of the employed, <em>p</em> is the share receiving transfers and <em>&Theta;</em> is the transfer received. The change in <em>y</em> splits exactly into <em>e<sub>1</sub>&Delta;w</em> (wages), <em>w<sub>0</sub>&Delta;e</em> (employment), <em>p<sub>1</sub>&Delta;&Theta;</em> (transfer income), <em>&Theta;<sub>0</sub>&Delta;p</em> (transfer share) and other income, each divided by initial income.</p>
     <p><strong>Groups.</strong> Countries are classed as high-income or middle-income by 2004 GDP per capita (PPP), as in the paper. Group lines are simple averages across countries. Shaded bands around the group averages and vertical lines around country points are 95% confidence intervals.</p>
-    <p><strong>Imputation in group averages.</strong> Not all countries have a survey in every period (for example, 2022&ndash;24 data are not yet available for several countries). To keep the set of countries constant, a country with no survey in a period enters the group average with its most recent Age Group Income Ratio (last value carried forward). These averages are therefore <em>partially imputed</em>; they are shown with hollow markers, and the Notes button above the chart lists the countries concerned. Country lines and the decomposition use observed values only.</p>
+    <p><strong>Carried-forward values in group averages.</strong> Not all countries have a survey in every period (for example, 2022&ndash;24 data are not yet available for several countries). To keep the set of countries constant, a country with no survey in a period enters the group average with its most recent Age Group Income Ratio (last value carried forward). These averages therefore include carried-forward values; they are shown with hollow markers, and the Notes button above the chart lists the countries concerned. Country lines and the decomposition use observed values only.</p>
     <p><strong>Data files.</strong> <a href="data/agir_data.csv" download>Full dataset (CSV)</a>: average income and its components by country, period and age group, from which every number in this dashboard is computed. The variables are described in the <a href="https://github.com/gabbolus/agir-explorer/blob/main/data/CODEBOOK.md" target="_blank" rel="noopener">codebook</a>. The code of the dashboard is on <a href="https://github.com/gabbolus/agir-explorer" target="_blank" rel="noopener">GitHub</a> (MIT licence).</p>
   </details>
   <details class="card methods" id="country-notes">
@@ -232,18 +243,18 @@
     <div id="countryNotes"></div>
   </details>
 
-  <section class="card limits" aria-labelledby="limTitle">
-    <h2 id="limTitle">Limitations</h2>
+  <details class="card limits" id="limits" open>
+    <summary><h2 id="limTitle">Limitations</h2></summary>
     <p class="note">What the numbers can and cannot tell you.</p>
     <ul>
       <li><strong>Averages, not distributions.</strong> The ratio compares the average income of two age groups. It does not show how income is distributed <em>within</em> each group.</li>
       <li><strong>Capital income and wealth are not observed.</strong> The data have no individual-level capital income, and wealth is increasingly concentrated among older people. The ratio therefore likely understates the age-income gap, and its rise, in high-income countries: read it as a lower bound.</li>
       <li><strong>Individual income only.</strong> Income is personal labour income plus personal transfers, net of income taxes. Household-wide benefits (child allowances, housing benefits) are left out; in the paper, adding them gave similar results for 2004&ndash;2018.</li>
       <li><strong>Accounting, not causes.</strong> The decomposition shows which income component moved, not why. It also approximates the change in the Age Group Income Ratio well only when growth is small. Explanations such as skill congestion come from the paper&rsquo;s model, not from this dashboard.</li>
-      <li><strong>Uneven and incomplete coverage.</strong> Countries are surveyed in different years and some recent periods are missing. Group averages carry the last available value forward (partially imputed); country lines and the decomposition use observed values only.</li>
-      <li><strong>Breaks and the pandemic.</strong> Changes in surveys can move the numbers; see the &dagger; notes (for example Mexico 2024 and South Africa 2023). In 2019&ndash;21, job-retention schemes are recorded as wages in some countries and as transfers in others, which shifts weight between those two components.</li>
+      <li><strong>Uneven and incomplete coverage.</strong> Countries are surveyed in different years and some recent periods are missing. Group averages carry the last available value forward (hollow markers); country lines and the decomposition use observed values only.</li>
+      <li><strong>Breaks and the pandemic.</strong> Changes in surveys can move the numbers; see the &dagger; notes (for example Mexico 2024). In 2019&ndash;21, job-retention schemes are recorded as wages in some countries and as transfers in others, which shifts weight between those two components.</li>
     </ul>
-  </section>
+  </details>
   <section class="card cite" id="cite" tabindex="-1" aria-labelledby="citeTitle">
     <h2 id="citeTitle">How to cite</h2>
     <p class="note">If you use these numbers, please cite the paper and the LIS data.</p>
@@ -255,7 +266,7 @@
     </div>
     <details class="bib">
       <summary>Show BibTeX</summary>
-      <pre id="bibText">@article{GuaitoliPancrazi2026,
+      <pre id="bibText" tabindex="0" aria-label="BibTeX entry">@article{GuaitoliPancrazi2026,
   author  = {Guaitoli, Gabriele and Pancrazi, Roberto},
   title   = {Age-Income Gaps: The Role of Skill Congestion},
   journal = {European Economic Review},
@@ -271,6 +282,6 @@
   <div id="noteTip" class="tip" role="tooltip" hidden></div>
   <footer class="foot">Data: Luxembourg Income Study (LIS) Database, (multiple countries; microdata runs completed on 22 October 2026). Luxembourg: LIS. All figures are aggregates computed by the authors. Code: <a href="https://github.com/gabbolus/agir-explorer" target="_blank" rel="noopener">GitHub</a> (MIT licence).</footer>
 </div>
-<script src="assets/app.js?v=20261027d"></script>
+<script defer src="assets/app.js?v=20261114a"></script>
 </body>
 </html>

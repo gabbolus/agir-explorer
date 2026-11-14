@@ -8,7 +8,7 @@ The same table is loaded by the dashboard from `agir_data.js` (as the text varia
 
 ## Structure
 
-One row per **country × period type × period × age group**. The file has 38 countries: the 37 in the analysis plus South Africa, which the dashboard shows with a caveat (its survey changed in 2023) and leaves out of the group averages.
+One row per **country × period type × period × age group**. The file has 37 countries.
 
 | Column | Type | Description |
 |---|---|---|

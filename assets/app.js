@@ -6,12 +6,11 @@
   const RICH = new Set(["Australia", "Austria", "Belgium", "Canada", "Czechia", "Denmark",
     "Finland", "France", "Germany", "Iceland", "Ireland", "Israel", "Italy", "Netherlands",
     "Norway", "Slovenia", "Spain", "Sweden", "Switzerland", "United Kingdom", "United States"]);
-  const CAVEAT = { "South Africa": "survey series changes in 2023" };
+  const CAVEAT = {};   // countries kept out of the group averages (none at present)
   // country notes: data features that affect the interpretation (marked with † in the charts)
   const UNEMP = "Transfers exclude unemployment benefits (not reported consistently across survey years).";
   const NOTES = {
     "Israel": ["No individual-level transfer income in the LIS data; transfer components are zero by construction.", UNEMP],
-    "South Africa": ["Change of survey in 2023 (NIDS replaced by the Income and Expenditure Survey); comparisons across 2023 are not like-for-like. Excluded from group averages.", UNEMP],
     "Mexico": ["New ENIGH survey series from 2024; comparisons across 2024 are not like-for-like.", UNEMP],
     "Germany": ["Employment status missing for 15–26% of respondents aged 25–64 in 2018–2022; employment rates refer to respondents with non-missing status."],
     "Sweden": ["Sample size reduced from 2013 (to about one third of earlier years); lower precision from 2013 onwards."],
@@ -25,16 +24,17 @@
   };
   const NOTE_MARK = "†";
   const withMark = c => (NOTES[c] ? `${c}${NOTE_MARK}` : c);
+  const pickName = c => withMark(c) + (CAVEAT[c] ? ` <span class="nm-sub">(not in averages)</span>` : "");
   const noteText = c => (NOTES[c] || []).join(" ");
   const WAVES = { 1: "2004–06", 2: "2007–09", 3: "2010–12", 4: "2013–15", 5: "2016–18",
     6: "2019–21", 7: "2022–24", 8: "2025–27" };
   const OLD = 5, YOUNG = 2;
   const MARGINS = [
-    { key: "wage", label: "Wages", color: "--series-1" },
-    { key: "employ", label: "Employment", color: "--series-2" },
-    { key: "tr_inc", label: "Transfer income", color: "--series-3" },
-    { key: "tr_share", label: "Transfer share", color: "--series-4" },
-    { key: "other", label: "Other income", color: "--series-5" }
+    { key: "wage", label: "Wages", color: "--m-wage" },
+    { key: "employ", label: "Employment", color: "--m-emp" },
+    { key: "tr_inc", label: "Transfer income", color: "--m-trinc" },
+    { key: "tr_share", label: "Transfer share", color: "--m-trsh" },
+    { key: "other", label: "Other income", color: "--m-oth" }
   ];
 
   const num = v => (v === "" || v === undefined ? NaN : +v);
@@ -79,7 +79,7 @@
   }
   // Group averages with last-value-carried-forward: a country with no survey in a
   // period keeps its most recent AGIR (from its first survey onwards). Points that
-  // use carried-forward values are flagged as partially imputed.
+  // use carried-forward values are flagged as including carried-forward values.
   function groupSeries(list, ptype) {
     const grid = periodsAvailable(ptype);
     const acc = {};
@@ -139,6 +139,9 @@
   const fmt = (x, d = 2) => (!isFinite(x) ? "–" : Math.abs(x) < 0.5 * 10 ** -d ? (0).toFixed(d) : (x > 0 ? "+" : "") + x.toFixed(d));
   // break long hover text into lines of ~70 characters
   const wrap = (t, n = isNarrow() ? 30 : 70) => t.replace(new RegExp(`(.{1,${n}})(\\s|$)`, "g"), "$1<br>").replace(/<br>$/, "");
+  // compact period text for phone row labels: from ’07, to ’21, ’07–’21, only ’10
+  const cYr = (ptype, t, end) => { if (ptype !== "wave") return "\u2019" + String(t).slice(2); const m = WAVES[t].match(/^(\d{4})\u2013(\d\d)$/); return "\u2019" + (end ? m[2] : m[1].slice(2)); };
+  const cOnly = (ptype, t) => ptype !== "wave" ? "\u2019" + String(t).slice(2) : (m => "\u2019" + m[1].slice(2) + "\u2013" + m[2])(WAVES[t].match(/^(\d{4})\u2013(\d\d)$/));
   const label = (ptype, t) => (ptype === "wave" ? WAVES[t] : String(t));
   function hexA(hex, a) {
     const h = hex.replace("#", ""), n = parseInt(h, 16);
@@ -161,10 +164,10 @@
     modeBarButtonsToRemove: ["zoom2d", "pan2d", "zoomIn2d", "zoomOut2d", "autoScale2d", "resetScale2d", "lasso2d", "select2d"] };
 
   // the chart's own camera button is replaced so the saved picture still has a legend
-  function exportPng(gd, name) {
-    const lay = Object.assign({}, gd.layout, { showlegend: true, margin: Object.assign({}, gd.layout.margin, { t: 60 }),
-      legend: Object.assign({}, gd.layout.legend, { traceorder: "normal" }) });
-    Plotly.toImage({ data: gd.data, layout: lay }, { format: "png", width: gd.offsetWidth, height: gd.offsetHeight + 46, scale: 2 })
+  function exportPng(gd, name, legend = true) {
+    const lay = legend ? Object.assign({}, gd.layout, { showlegend: true, margin: Object.assign({}, gd.layout.margin, { t: 60 }),
+      legend: Object.assign({}, gd.layout.legend, { traceorder: "normal" }) }) : Object.assign({}, gd.layout);
+    Plotly.toImage({ data: gd.data, layout: lay }, { format: "png", width: gd.offsetWidth, height: gd.offsetHeight + (legend ? 46 : 0), scale: 2 })
       .then(url => { const a = document.createElement("a"); a.href = url; a.download = name + ".png"; document.body.appendChild(a); a.click(); a.remove(); });
   }
   const AGIR_CONFIG = Object.assign({}, CONFIG, { modeBarButtonsToRemove: [...CONFIG.modeBarButtonsToRemove, "toImage"],
@@ -180,7 +183,7 @@
   }
 
   // --------------------------------------------------------------- state ----
-  const state = { ptype: "wave", from: 1, to: 7, group: "all", sort: "grd", cmp: [], grp: { "High-income": true, "Middle-income": true }, osort: "to", ovTable: false, table: false, agirTable: false, exact: false,
+  const state = { ptype: "wave", from: 1, to: 7, group: "all", sort: "grd", cmp: [], grp: { "High-income": true, "Middle-income": true }, osort: "to", drAll: false, ovTable: false, table: false, agirTable: false, exact: false,
     ovSel: { c: new Set(), g: { "High-income": true, "Middle-income": true } }, drSel: { c: new Set(), g: { "High-income": true, "Middle-income": true } } };
   countries.forEach(c => { state.ovSel.c.add(c); state.drSel.c.add(c); });
 
@@ -233,12 +236,12 @@
     return `Choose lines \u00b7 ${ng + state.cmp.length}`;
   }
   function buildPicker() {
-    const row = (key, text, extra = "") => `<label class="prow" data-key="${key}" data-name="${text.toLowerCase()}"><input type="checkbox" value="${key}"><span class="sw" aria-hidden="true"></span><span class="nm">${text}</span>${extra}</label>`;
+    const row = (key, text, extra = "") => `<label class="prow" data-key="${key}" data-name="${text.replace(/<[^>]+>/g, "").toLowerCase()}"><input type="checkbox" value="${key}"><span class="sw" aria-hidden="true"></span><span class="nm">${text}</span>${extra}</label>`;
     const sect = (title, items) => `<div class="p-sec" role="group" aria-label="${title}"><h3>${title}</h3>${items}</div>`;
     const cl = g => countries.filter(c => groupOf(c) === g);
     $("pickList").innerHTML =
       sect("Group averages", GROUPS.map(([g]) => row("G:" + g, g + " average")).join("")) +
-      GROUPS.map(([g]) => sect(`${g} countries`, cl(g).map(c => row("C:" + c, withMark(c))).join(""))).join("") +
+      GROUPS.map(([g]) => sect(`${g} countries`, cl(g).map(c => row("C:" + c, pickName(c))).join(""))).join("") +
       `<p class="p-empty" id="pickEmpty" hidden>No country matches your search.</p>`;
   }
   function syncPicker() {
@@ -321,7 +324,7 @@
       `<div class="p-head"><input type="search" placeholder="Search countries" aria-label="Search countries" autocomplete="off"><button type="button" class="pnone">Clear all</button></div>` +
       `<div class="p-body"><div class="p-quick" role="group" aria-label="Quick choices"><button type="button" data-q="all">All countries</button><button type="button" data-q="High-income">High-income only</button><button type="button" data-q="Middle-income">Middle-income only</button></div>` +
       `<div class="p-sec" role="group" aria-label="Group averages"><h3>Group averages</h3>${GROUPS.map(([g]) => `<label class="prow" data-key="G:${g}" data-name="${g.toLowerCase()} average"><input type="checkbox" value="G:${g}"><span class="nm">${g} average</span></label>`).join("")}</div>` +
-      GROUPS.map(([g]) => `<div class="p-sec" role="group" aria-label="${g} countries"><h3>${g} countries</h3>${countries.filter(c => groupOf(c) === g).map(c => `<label class="prow" data-key="C:${c}" data-name="${c.toLowerCase()}"><input type="checkbox" value="C:${c}"><span class="nm">${withMark(c)}</span></label>`).join("")}</div>`).join("") +
+      GROUPS.map(([g]) => `<div class="p-sec" role="group" aria-label="${g} countries"><h3>${g} countries</h3>${countries.filter(c => groupOf(c) === g).map(c => `<label class="prow" data-key="C:${c}" data-name="${c.toLowerCase()}"><input type="checkbox" value="C:${c}"><span class="nm">${pickName(c)}</span></label>`).join("")}</div>`).join("") +
       `<p class="p-empty" hidden>No country matches your search.</p></div>` +
       `<div class="p-foot"><span class="pc" aria-live="polite"></span><button type="button" class="primary pdone">Done</button></div></div>`;
     const btn = root.querySelector(":scope > button"), panel = root.querySelector(".panel"), back = root.querySelector(".backdrop"), search = root.querySelector("input[type=search]");
@@ -373,18 +376,19 @@
   // ------------------------------------------------------------ chart 1 ----
   let agirTbl = [];
   function renderAgir() {
-    const traces = [], summ = [], tbl = [], impAll = {};
+    const traces = [], summ = [], tbl = [], impAll = {}, ends = [];
     const xs = d => d.map(p => (state.ptype === "wave" ? WAVES[p.t] : p.t));
-    // each line has its own marker shape; filled = observed, open = partially imputed
+    // each line has its own marker shape; filled = observed, open = includes carried-forward values
     [["High-income", "--series-1", "solid", "circle"], ["Middle-income", "--series-2", "dash", "square"]].filter(x => state.grp[x[0]]).forEach(([g, col, dash, sym]) => {
       const s = groupSeries(countries.filter(c => groupOf(c) === g && !CAVEAT[c]), state.ptype);
       const c = css(col);
       tbl.push({ name: `${g} average`, pts: s.map(d => ({ t: d.t, v: d.v, ci: 1.96 * d.se, imp: d.imp.length > 0 })) });
-      summ.push(`${g} average: ` + s.map(d => `${label(state.ptype, d.t)} ${d.v.toFixed(2)}${d.imp.length ? " (partly imputed)" : ""}`).join(", ") + ".");
+      summ.push(`${g} average: ` + s.map(d => `${label(state.ptype, d.t)} ${d.v.toFixed(2)}${d.imp.length ? " (includes carried-forward values)" : ""}`).join(", ") + ".");
       traces.push({ x: xs(s), y: s.map(d => d.v + 1.96 * d.se), mode: "lines", line: { width: 0 }, hoverinfo: "skip", showlegend: false });
       traces.push({ x: xs(s), y: s.map(d => d.v - 1.96 * d.se), mode: "lines", line: { width: 0 }, fill: "tonexty",
         fillcolor: hexA(c, 0.15), hoverinfo: "skip", showlegend: false });
       impAll[g] = [...new Set(s.flatMap(d => d.imp))];
+      if (s.length) ends.push({ x: xs(s)[s.length - 1], y: s[s.length - 1].v, text: g, color: c });
       traces.push({ x: xs(s), y: s.map(d => d.v), name: `${g} average`, mode: "lines+markers",
         line: { color: c, width: 2, dash },
         marker: { size: 9, symbol: s.map(d => d.imp.length ? `${sym}-open` : sym), color: c,
@@ -407,6 +411,7 @@
       tbl.push({ name: withMark(c), pts: seen.map(d => ({ t: d.t, v: d.v, ci: 1.96 * d.se, imp: false })) });
       summ.push(`${c}: ` + seen.map(d => `${label(state.ptype, d.t)} ${d.v.toFixed(2)}`).join(", ") + (miss.length ? `; no data for ${miss.join(", ")}` : "") + ".");
       if (miss.length) noData.push(`${c}: ${miss.join(", ")}`);
+      if (seen.length) ends.push({ x: xs([seen[seen.length - 1]])[0], y: seen[seen.length - 1].v, text: withMark(c), color: col });
       traces.push({ x: xs(pts), y: pts.map(d => d.v), name: withMark(c), mode: "lines+markers", connectgaps: true,
         line: { color: col, width: 2 }, marker: { size: 12, symbol: syms[i], color: col, line: { color: css("--surface-1"), width: 1 } },
         error_y: { type: "data", array: pts.map(d => (d.se === null ? null : 1.96 * d.se)), color: hexA(col, 0.8), thickness: 1.75, width: 3 },
@@ -419,7 +424,23 @@
     lay.shapes = [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: 1, y1: 1, line: { color: css("--text-muted"), width: 1, dash: "dot" } }];
     lay.hovermode = "x unified";
     lay.showlegend = false; lay.margin.t = 14;   // the chips above the chart are the legend
-    if (isNarrow()) { lay.yaxis.title.text = "AGIR, 55–64 / 25–34"; lay.margin.r = 24; lay.margin.b = 64; lay.xaxis.automargin = true; lay.xaxis.tickangle = -40; lay.xaxis.tickfont = { size: 12, color: css("--text-secondary") }; }
+    if (isNarrow()) { lay.yaxis.title.text = "AGIR, 55–64 / 25–34"; lay.margin.r = 24; lay.margin.b = 64; lay.xaxis.automargin = true; lay.xaxis.tickangle = -40; lay.xaxis.tickfont = { size: 13, color: css("--text-secondary") }; }
+    // direct labels at the end of each line (desktop); the chips above stay the controls
+    if (!isNarrow() && ends.length) {
+      const ally = traces.flatMap(t => (t.y || []).filter(v => v !== null && isFinite(v)));
+      const rng = Math.max(0.05, Math.max(...ally, 1) - Math.min(...ally, 1));
+      const plotH = (($("agirChart").clientHeight || 420) - 14 - 40) / (rng * 1.1);
+      const byX = {};
+      ends.forEach(e => (byX[e.x] ||= []).push(e));
+      Object.values(byX).forEach(g => {
+        g.sort((a, b) => b.y - a.y);
+        let prev = null;
+        g.forEach(e => { let px = e.y * plotH; if (prev !== null && px > prev - 16) px = prev - 16; e.shift = px - e.y * plotH; prev = px; });
+      });
+      lay.annotations = ends.map(e => ({ xref: "x", yref: "y", x: e.x, y: e.y, text: `<span style="color:${e.color}">\u25CF</span> ${e.text}`, showarrow: false,
+        xanchor: "left", xshift: 12, yshift: e.shift, font: { size: 13, color: css("--text-primary") } }));
+      lay.margin.r = Math.min(210, 24 + 7.4 * Math.max(...ends.map(e => e.text.length + 2)));
+    }
     const chartEl = $("agirChart");
     if (!traces.length) {
       Plotly.purge("agirChart");
@@ -430,10 +451,10 @@
     }
     $("agirSummary").textContent = "Line chart of the Age Group Income Ratio, 55 to 64 year-olds over 25 to 34 year-olds, by period. A value above 1 means older people have the higher average income. " + summ.join(" ");
     agirTbl = tbl; renderAgirTable();
-    const how = "<strong>Partially imputed values.</strong> Group averages keep every country in every period: when a country has no survey in a period, its latest available Age Group Income Ratio is carried forward. " +
+    const how = "<strong>Carried-forward values.</strong> Group averages keep every country in every period: when a country has no survey in a period, its latest available Age Group Income Ratio is carried forward. " +
       ["High-income", "Middle-income"].filter(g => impAll[g] && impAll[g].length).map(g => `<br><strong>${g}, carried forward in at least one period:</strong> ${impAll[g].join(", ")}.`).join("") + "<br>" +
       (state.ptype === "year" ? "With single years, many values are carried forward between surveys, so waves are more reliable. " : "") +
-      "South Africa is not in the group averages. Country lines show observed values only.";
+      "Country lines show observed values only.";
     const readMe = "<strong>How to read the chart.</strong> The dotted line marks equal incomes (ratio of 1). Vertical lines on countries" + (anyGroup() ? " and shaded bands on group averages" : "") + " are 95% confidence intervals." +
       (anyGroup() ? " Filled markers are observed values; hollow markers include carried-forward values." : "") +
       " A country line joins the surveys we observe; a period without a survey has no marker and nothing is imputed." +
@@ -462,7 +483,7 @@
     if (from >= to) { hint.hidden = false; hint.textContent = "Choose a \u201cTo\u201d period after the \u201cFrom\u201d period."; $("readLineBody").innerHTML = ""; return; }
     hint.hidden = useC;
     hint.textContent = useC ? "" : `Average of the countries in each group. Tick ${state.cmp.length > 2 ? "only " : ""}one or two countries in the chart above to read their lines here.`;
-    const fig = d => `<div class="fig"><div class="yr">${P(d.t)}</div><div class="big">${d.v.toFixed(2)}</div><div class="sub">AGIR${d.imp && d.imp.length ? ", partly imputed" : ""}</div></div>`;
+    const fig = d => `<div class="fig"><div class="yr">${P(d.t)}</div><div class="big">${d.v.toFixed(2)}</div><div class="sub">AGIR${d.imp && d.imp.length ? ", incl. carried-forward values" : ""}</div></div>`;
     const card = (col, ico, title, pts, who, edge = () => "", extra = "") => {
       const head = `<header>${ico}<h3>${title}</h3></header>`;
       if (!pts.length) return `<article class="lc" style="--lc:var(${col})">${head}<p>No survey for this country between ${P(from)} and ${P(to)}.</p></article>`;
@@ -485,7 +506,7 @@
       const pts = [s.find(d => d.t === from), s.find(d => d.t === to)].filter(Boolean);
       const imp = [...new Set(pts.flatMap(d => d.imp))];
       const id = `imp-rl-${g}`;
-      const extra = imp.length ? `<button type="button" class="imp-btn" aria-expanded="false" aria-controls="${id}" aria-label="Partly imputed: show which countries"><span aria-hidden="true">i</span></button><div class="imp-pop" id="${id}" role="note" hidden><strong>Partly imputed.</strong> ${imp.join(", ")} carried forward from their latest survey.</div>` : "";
+      const extra = imp.length ? `<button type="button" class="imp-btn" aria-expanded="false" aria-controls="${id}" aria-label="Carried-forward values: show which countries"><span aria-hidden="true">i</span></button><div class="imp-pop" id="${id}" role="note" hidden><strong>Carried-forward values.</strong> ${imp.join(", ")} carried forward from their latest survey.</div>` : "";
       return card(col, groupIcon(g), `${g} average`, pts, `In the average ${g.toLowerCase()} country`, () => "", extra);
     }).join("");
   }
@@ -527,11 +548,12 @@
     ovRows = all.slice().reverse();
     const muted = css("--text-muted");
     const shortP = r => r.single ? `only ${P(r.z.t)}` : r.a.t !== from && r.z.t !== to ? `${P(r.a.t)} to ${P(r.z.t)}` : r.z.t !== to ? `to ${P(r.z.t)}` : `from ${P(r.a.t)}`;
+    const shortC = r => r.single ? `only ${cOnly(ptype, r.z.t)}` : r.a.t !== from && r.z.t !== to ? `${cYr(ptype, r.a.t)}\u2013${cYr(ptype, r.z.t, true)}` : r.z.t !== to ? `to ${cYr(ptype, r.z.t, true)}` : `from ${cYr(ptype, r.a.t)}`;
     const ys = all.map(r => {
       let n = r.isAvg ? `<b>${r.name}</b>` : withMark(r.name);
       if (narrow) n = n.replace("United Kingdom", "UK").replace("United States", "US").replace(" average", " avg");
       n = hiLabel(r.isAvg ? null : r.name, n);
-      if (r.moved) n = `<i><span style="color:${muted}">${n}${narrow ? "" : ` (${shortP(r)})`}</span></i>`;
+      if (r.moved) n = `<i><span style="color:${muted}">${n}${narrow ? " " + shortC(r) : ` (${shortP(r)})`}</span></i>`;
       return n;
     });
     const up = css("--c-old"), down = css("--c-young"), flat = css("--text-secondary");
@@ -550,11 +572,11 @@
     const lay = baseLayout();
     lay.showlegend = false; lay.hovermode = "closest";
     lay.margin = narrow ? { l: 8, r: 12, t: 30, b: 56 } : Object.assign(lay.margin, { l: 170, t: 30 });
-    lay.height = Math.max(narrow ? 200 : 220, (narrow ? 21 : 24) * all.length + 100);
+    lay.height = Math.max(narrow ? 200 : 220, (narrow ? 26 : 24) * all.length + 100);
     lay.xaxis = axis({ title: { text: narrow ? "AGIR" : "Age Group Income Ratio, 55–64 / 25–34", font: { color: css("--text-secondary") } } });
     lay.xaxis2 = axis({ overlaying: "x", side: "top", matches: "x", showgrid: false, zeroline: false, showline: false });
     // rows in sorted order (otherwise Plotly orders them by the first trace that uses them)
-    lay.yaxis = axis({ automargin: true, categoryorder: "array", categoryarray: ys, tickfont: { size: narrow ? 11 : 14, color: css("--text-primary") } });
+    lay.yaxis = axis({ automargin: true, categoryorder: "array", categoryarray: ys, tickfont: { size: narrow ? 13 : 14, color: css("--text-primary") } });
     lay.shapes = [{ type: "line", xref: "x", yref: "paper", x0: 1, x1: 1, y0: 0, y1: 1, line: { color: css("--text-muted"), width: 1, dash: "dot" } }];
     Plotly.react("ovChart", traces, lay, narrow ? PHONE_CONFIG : CONFIG);
     $("ovLegend").innerHTML = `<span><i class="seg up"></i>Rising: shifting towards 55&ndash;64</span><span><i class="seg down"></i>Falling: shifting towards 25&ndash;34</span>` +
@@ -575,7 +597,7 @@
   function renderOvTable() {
     const w = $("ovTableWrap");
     w.hidden = !state.ovTable;
-    $("toggleOvTable").textContent = state.ovTable ? "Hide table" : "Show table";
+    $("toggleOvTable").textContent = state.ovTable ? "Hide data table" : "Show data table";
     $("toggleOvTable").setAttribute("aria-expanded", String(state.ovTable));
     if (!state.ovTable) return;
     const P = t => label(state.ptype, t);
@@ -642,13 +664,13 @@
   function renderAgirTable() {
     const w = $("agirTableWrap");
     w.hidden = !state.agirTable;
-    $("toggleAgirTable").textContent = state.agirTable ? "Hide table" : "Show table";
+    $("toggleAgirTable").textContent = state.agirTable ? "Hide data table" : "Show data table";
     $("toggleAgirTable").setAttribute("aria-expanded", String(state.agirTable));
     if (!state.agirTable) return;
     const ps = periodsAvailable(state.ptype);
     w.innerHTML = `<table><caption class="sr-only">Age Group Income Ratio by period, with 95% confidence interval</caption><thead><tr><th scope="col">Period</th>${agirTbl.map(s => `<th scope="col">${s.name}</th>`).join("")}</tr></thead><tbody>` +
       ps.map(t => `<tr><th scope="row">${label(state.ptype, t)}</th>${agirTbl.map(s => { const d = s.pts.find(x => x.t === t); return `<td>${d ? `${d.v.toFixed(2)} ±${d.ci.toFixed(2)}${d.imp ? " *" : ""}` : "no data"}</td>`; }).join("")}</tr>`).join("") +
-      `</tbody></table><p class="note">Ratio ± 95% confidence interval. * partially imputed (some countries&rsquo; values carried forward).</p>`;
+      `</tbody></table><p class="note">Ratio ± 95% confidence interval. * includes carried-forward values (a country with no survey in that period keeps its latest value).</p>`;
   }
 
   // ------------------------------------------------------------ chart 2 ----
@@ -659,6 +681,7 @@
     $("decompPeriod").textContent = `${label(ptype, from)} to ${label(ptype, to)}`;
     const dsel = state.drSel, list = countries.filter(c => dsel.c.has(c));
     const res = [], missing = [];
+    $("drMore").innerHTML = "";
     if (from >= to) {
       Plotly.purge("decompChart");
       $("decompLegend").hidden = true;
@@ -691,17 +714,33 @@
     const ext = byG.length ? ` Among the ${byG.length} countries shown, the total ranges from ${fmt(byG[byG.length - 1].growth)} (${byG[byG.length - 1].country}) to ${fmt(byG[0].growth)} (${byG[0].country}).` : "";
     $("decompSummary").textContent = `Bar chart, ${label(ptype, from)} to ${label(ptype, to)}, of the annual growth rate differential between people aged 55 to 64 and 25 to 34, split into wages, employment, transfer income, transfer share and other income, in percentage points per year. Positive values mean the Age Group Income Ratio is rising, so income is shifting towards 55 to 64 year-olds. ${parts.join(" ")}${ext} Use the Show table button for all values.`;
     decompAnnounce = `What drove the change, ${label(ptype, from)} to ${label(ptype, to)}. ${parts.join(" ")}`;
-    const all = [...res, ...avgs];   // plotted bottom-to-top, so averages appear on top
+    // phones: with many countries, draw the largest changes (plus ticked countries); the table and CSV keep every row
+    const TRIM = 12, KEEP = 10;
+    let all = [...res, ...avgs];     // plotted bottom-to-top, so averages appear on top
+    let hiddenRows = 0;
+    if (isNarrow() && !state.drAll && res.length > TRIM) {
+      const top = new Set(res.slice().sort((a, b) => Math.abs(b.growth) - Math.abs(a.growth)).slice(0, KEEP).map(r => r.country));
+      state.cmp.forEach(c => top.add(c));
+      const keep = res.filter(r => top.has(r.country));
+      hiddenRows = res.length - keep.length;
+      all = [...keep, ...avgs];
+    }
+    const mr = $("drMore");
+    mr.innerHTML = isNarrow() && res.length > TRIM
+      ? `<button type="button" class="linkbtn" id="drMoreBtn">${state.drAll ? "Show only the largest changes" : `Show all ${res.length} countries`}</button>` +
+        (hiddenRows ? ` <span class="note">Showing the ${res.length - hiddenRows} largest changes (and countries you ticked above). The table has all ${res.length}.</span>` : "")
+      : "";
     current = [...avgs.slice().reverse(), ...res.slice().reverse()];
     // rows that had to use a shorter period (a survey is missing) get grey italic names
     res.forEach(r => { r.moved = r.from !== from || r.to !== to; });
     const shortP = r => r.from !== from && r.to !== to ? `${label(ptype, r.from)} to ${label(ptype, r.to)}` : r.to !== to ? `to ${label(ptype, r.to)}` : `from ${label(ptype, r.from)}`;
+    const shortC = r => r.from !== from && r.to !== to ? `${cYr(ptype, r.from)}\u2013${cYr(ptype, r.to, true)}` : r.to !== to ? `to ${cYr(ptype, r.to, true)}` : `from ${cYr(ptype, r.from)}`;
     const muted = css("--text-muted");
     const yname = r => {   // on phones the label column is kept narrow so the bars get the room
       let n = r.isAvg ? `<b>${r.country}</b>` : withMark(r.country);
       if (isNarrow()) n = n.replace("United Kingdom", "UK").replace("United States", "US");
       n = hiLabel(r.isAvg ? null : r.country, n);
-      if (r.moved) n = `<i><span style="color:${muted}">${n}${isNarrow() ? "" : ` (${shortP(r)})`}</span></i>`;
+      if (r.moved) n = `<i><span style="color:${muted}">${n}${isNarrow() ? " " + shortC(r) : ` (${shortP(r)})`}</span></i>`;
       return n;
     };
     const ys = all.map(yname);
@@ -723,18 +762,18 @@
     const narrow = isNarrow();
     // on phones the labels get only the room they need, so the bars use the full width
     lay.margin = narrow ? { l: 8, r: 8, t: 30, b: 56 } : Object.assign(lay.margin, { l: 170, t: 30 });
-    lay.height = Math.max(narrow ? 200 : 220, (narrow ? 28 : 26) * all.length + 100);
+    lay.height = Math.max(narrow ? 200 : 220, (narrow ? 30 : 26) * all.length + 100);
     // the legend is plain HTML above the chart, so it can use the full width and leave room for the top scale
     lay.showlegend = false;
     const lg = $("decompLegend");
     lg.innerHTML = MARGINS.map(m => `<span><i class="sw" style="background:${css(m.color)}"></i>${m.label}</span>`).join("") +
       `<span><i class="dia"></i>Total (GRD)</span>`;
 
-    lay.xaxis = axis({ title: { text: "percentage points per year", font: { color: css("--text-secondary") } }, zeroline: true, zerolinewidth: 1.5 });
+    lay.xaxis = axis({ title: { text: narrow ? "pp per year" : "percentage points per year", font: { color: css("--text-secondary") } }, zeroline: true, zerolinewidth: 1.5 });
     // the chart is tall, so the scale is repeated at the top
     lay.xaxis2 = axis({ overlaying: "x", side: "top", matches: "x", showgrid: false, zeroline: false, showline: false });
     traces.push({ type: "scatter", mode: "markers", x: [0], y: [ys[0]], xaxis: "x2", marker: { opacity: 0 }, hoverinfo: "skip", showlegend: false });
-    lay.yaxis = axis({ automargin: true, tickfont: { size: narrow ? 11 : 14, color: css("--text-primary") } });
+    lay.yaxis = axis({ automargin: true, tickfont: { size: narrow ? 13 : 14, color: css("--text-primary") } });
     lay.hovermode = "closest";
     Plotly.react("decompChart", traces, lay, narrow ? PHONE_CONFIG : CONFIG);
     const moved = res.filter(r => r.moved);
@@ -751,7 +790,7 @@
   function renderTable() {
     const wrap = $("tableWrap");
     wrap.hidden = !state.table;
-    $("toggleTable").textContent = state.table ? "Hide table" : "Show table";
+    $("toggleTable").textContent = state.table ? "Hide data table" : "Show data table";
     $("toggleTable").setAttribute("aria-expanded", String(state.table));
     if (!state.table) return;
     const cols = [["growth", "Total GRD"], ...MARGINS.map(m => [m.key, m.label])];
@@ -822,7 +861,28 @@
   document.addEventListener("keydown", e => { if (e.key === "Escape") hideTip(); });
 
   // ---------------------------------------------------------------- wire ----
-  function renderAll() { renderAgir(); renderOverview(); renderDecomp(); }
+  function renderKeyFind() {
+    const grp = g => groupSeries(countries.filter(c => groupOf(c) === g && !CAVEAT[c]), "wave");
+    const items = [];
+    ["High-income", "Middle-income"].forEach(g => {
+      const s = grp(g), a = s.find(d => d.t === 1), z = s.find(d => d.t === 7);
+      if (!a || !z) return;
+      const d = Math.round(100 * (z.v - a.v));
+      items.push(`<li><span class="k">${g} countries:</span> the average ratio went from <strong>${a.v.toFixed(2)}</strong> in ${WAVES[1]} to <strong>${z.v.toFixed(2)}</strong> in ${WAVES[7]}, ${d >= 0 ? "up" : "down"} <strong>${Math.abs(d)} percentage points</strong>.</li>`);
+    });
+    const hi = countries.filter(c => groupOf(c) === "High-income" && !CAVEAT[c]).map(c => decomp(c, "wave", 1, 7)).filter(Boolean);
+    if (hi.length) {
+      const m = k => hi.reduce((s, r) => s + r[k], 0) / hi.length;
+      const top = MARGINS.slice().sort((a, b) => m(b.key) - m(a.key))[0];
+      if (m("growth") > 0 && m(top.key) > 0) items.push(`<li><span class="k">What drove it:</span> in high-income countries the rise comes mostly from <strong>${top.label.toLowerCase()}</strong> (average of the countries, ${WAVES[1]} to ${WAVES[7]}; see the drivers chart below).</li>`);
+    }
+    $("keyFindList").innerHTML = items.join("") + `<li class="src">Group averages include carried-forward values where a country has no survey in a period.</li>`;
+    $("keyFind").hidden = !items.length;
+  }
+  function renderAll() {
+    renderAgir(); renderOverview(); renderDecomp(); renderKeyFind();
+    ["agirChart", "ovChart", "decompChart"].forEach(i => $(i).classList.remove("loading"));
+  }
   $("ptype").addEventListener("change", e => {
     state.ptype = e.target.value;
     if (state.ptype === "year") { state.from = 2004; state.to = 2022; } else { state.from = 1; state.to = 7; }
@@ -894,7 +954,27 @@
 
   $("countryNotes").innerHTML = Object.keys(NOTES).sort().map(c =>
     `<p><strong>${c}${NOTE_MARK}</strong> ${noteText(c)}</p>`).join("");
-  if (!isNarrow()) { $("readMore").open = true; $("defs").open = true; }
+  if (!isNarrow()) { $("defs").open = true; }
+  if (isNarrow()) $("limits").open = false;
+  // PNG downloads for the two lower charts
+  $("pngOv").addEventListener("click", () => { if ($("ovChart").data) exportPng($("ovChart"), "agir_all_countries", false); });
+  $("pngDr").addEventListener("click", () => { if ($("decompChart").data) exportPng($("decompChart"), "agir_drivers", true); });
+  $("drMore").addEventListener("click", e => { if (e.target.closest("#drMoreBtn")) { state.drAll = !state.drAll; renderDecomp(); const b = $("drMoreBtn"); if (b) b.focus(); } });
+  // "Change periods" jumps to the period filters
+  document.querySelectorAll(".goperiods").forEach(b => b.addEventListener("click", () => {
+    const c = $("controls"); c.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
+    $("from").focus({ preventScroll: true });
+  }));
+  // jump navigation: mark the section in view
+  if ("IntersectionObserver" in window) {
+    const links = [...document.querySelectorAll(".jump a")], map = new Map(links.map(a => [a.getAttribute("href").slice(1), a]));
+    const io = new IntersectionObserver(es => es.forEach(e => { if (e.isIntersecting) { links.forEach(a => a.removeAttribute("aria-current")); const a = map.get(e.target.id); if (a) a.setAttribute("aria-current", "true"); } }), { rootMargin: "-20% 0px -70% 0px" });
+    map.forEach((_, id) => { const el = $(id); if (el) io.observe(el); });
+  }
+  // printing: open every section
+  let wasOpen = [];
+  window.addEventListener("beforeprint", () => { wasOpen = [...document.querySelectorAll("details")].map(d => [d, d.open]); wasOpen.forEach(([d]) => { d.open = true; }); });
+  window.addEventListener("afterprint", () => { wasOpen.forEach(([d, o]) => { d.open = o; }); });
   readUrl();
   fillPeriods(); wirePicker();
   syncOvPicker = subPicker("ovPicker", state.ovSel, renderOverview, "overview chart");

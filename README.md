@@ -7,7 +7,7 @@ The **Age Group Income Ratio** is the average disposable income of people aged 5
 - follow the Age Group Income Ratio over time for high-income and middle-income countries, and for up to six individual countries, with a plain-language reading of each line;
 - compare all countries, or just the ones you pick, in two chosen periods;
 - choose any two periods (3-year waves or single survey years) and split the change in the age-income gap into **wages, employment, transfer income, transfer share and other income**;
-- see the numbers as tables, download them as CSV, and copy a link that opens the dashboard with the same choices.
+- see the numbers as data tables, download them as CSV (and the lower charts as PNG images), and copy a link that opens the dashboard with the same choices.
 
 **Live site:** [https://gabbolus.github.io/agir-explorer/](https://gabbolus.github.io/agir-explorer/)
 
@@ -24,7 +24,7 @@ The dashboard extends the paper's data beyond 2018 and adds new countries.
 - **Source:** Luxembourg Income Study (LIS) Database, accessed through LISSY in October 2026. All figures are aggregate statistics computed by the authors. No microdata are included.
 - **Income:** personal labour income plus transfers (pensions, unemployment, family and education benefits), net of personal income taxes, in constant prices.
 - **Growth Rate Differential (GRD):** annual income growth of 55–64 year-olds minus that of 25–34 year-olds, split exactly into the components listed above.
-- **Group averages:** to keep the same countries in every period, a country without a survey in a period enters the average with its latest available value. Points that rely on these carried-forward values are marked as partially imputed. Individual country lines show observed values only.
+- **Group averages:** to keep the same countries in every period, a country without a survey in a period enters the average with its latest available value. Points that rely on these carried-forward values are shown with hollow markers and described as including carried-forward values. Individual country lines show observed values only.
 - **Full dataset:** [`data/agir_data.csv`](data/agir_data.csv), described in the [codebook](data/CODEBOOK.md).
 
 Full details are in the "Data and methods" section of the dashboard and in the paper.
@@ -58,7 +58,8 @@ The address records the current choices, so a copied link opens the same view. F
 | File | Content |
 |---|---|
 | `index.html` | page layout and text |
-| `assets/app.js` | calculations and charts (runs in the browser; uses Plotly.js, basic bundle) |
+| `assets/app.js` | calculations and charts (runs in the browser) |
+| `assets/plotly-basic.min.js` | Plotly.js 2.35.2, basic bundle, hosted with the site (MIT licence, © Plotly, Inc.) |
 | `assets/style.css` | styling, light and dark mode |
 | `assets/preview.png` | image shown when the link is shared |
 | `assets/favicon.svg`, `assets/favicon-32.png`, `assets/apple-touch-icon.png` | site icons |
@@ -66,7 +67,11 @@ The address records the current choices, so a copied link opens the same view. F
 | `data/agir_data.csv` | the same table as a CSV file |
 | `data/CODEBOOK.md` | description of the variables and of how the dashboard uses them |
 
-`data/agir_data.js` and `data/agir_data.csv` are written by `read_agir_ext_log.R`; do not edit them by hand.
+`data/agir_data.js` and `data/agir_data.csv` are written by `read_agir_ext_log.R`; do not edit them by hand. The script leaves South Africa out (`dash_exclude`), because its survey changed in 2023 and the series is not comparable across the break. The dashboard covers 37 countries.
+
+## Page structure
+
+The three scripts (Plotly, data, app) are loaded with `defer`, so the text appears before the charts do; the chart areas show a placeholder until they are drawn. The `?v=` tags on the style, data and script files are cache tags: change them whenever those files change.
 
 ## Licence
 
