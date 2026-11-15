@@ -482,3 +482,10 @@ button.linkbtn { background: none; border: 0; padding: 4px 6px; min-height: 0; c
 .limits > summary h2 { display: inline; }
 .limits[open] > summary { margin-bottom: 4px; }
 .nm-sub { color: var(--text-muted); font-size: 13px; }
+
+/* period controls: type on its own row on phones, From and To side by side */
+@media (max-width: 600px) {
+  .controls label:has(select[id$="type"]) { flex: 1 1 100%; }
+  .controls label:has(select[id$="rom"]), .controls label:has(select[id$="To"]), .controls label:has(#to) { flex: 1 1 calc(50% - 8px); min-width: 0; }
+  .controls label:has(select[id$="rom"]) select, .controls label:has(select[id$="To"]) select, .controls label:has(#to) select { width: 100%; }
+}

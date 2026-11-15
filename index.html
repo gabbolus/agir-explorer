@@ -23,10 +23,10 @@
   <link rel="icon" href="assets/favicon-32.png" sizes="32x32" type="image/png">
   <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
   <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
-  <link rel="stylesheet" href="assets/style.css?v=20261114a">
+  <link rel="stylesheet" href="assets/style.css?v=20261114b">
   <link rel="preload" href="assets/plotly-basic.min.js" as="script">
   <script defer src="assets/plotly-basic.min.js"></script>
-  <script defer src="data/agir_data.js?v=20261114a"></script>
+  <script defer src="data/agir_data.js?v=20261114b"></script>
 </head>
 <body>
 <div class="viz-root">
@@ -97,7 +97,7 @@
       </div>
     </div>
     <div class="chiprow"><ul class="chips" id="selChips" aria-label="Lines shown on the chart"></ul><div id="agirNote"></div></div>
-  <section class="controls" id="controls" tabindex="-1" aria-label="Period filters">
+  <section class="controls" id="controls" tabindex="-1" aria-label="Chart period">
     <label>Periods
       <select id="ptype">
         <option value="wave" selected>3-year waves</option>
@@ -126,14 +126,22 @@
 
   <section class="card" id="overview" aria-labelledby="ovTitle">
     <div class="card-head">
-      <div><h2 id="ovTitle">All countries at a glance</h2><p class="period"><span id="ovPeriod"></span> <button type="button" class="linkbtn goperiods">Change periods</button></p></div>
+      <div><h2 id="ovTitle">All countries at a glance</h2><p class="period"><span id="ovPeriod"></span></p></div>
       <div class="btns">
         <button id="toggleOvTable" type="button" aria-expanded="false" aria-controls="ovTableWrap">Show data table</button>
         <button id="pngOv" type="button" title="Save this chart as an image">Download PNG</button>
       </div>
     </div>
-    <p class="note ov-lede">Each row shows a country&rsquo;s Age Group Income Ratio in the two periods chosen above. Right of the dotted line (1), <span class="chip old">55&ndash;64</span> year-olds have the higher average income; left of it, <span class="chip young">25&ndash;34</span> year-olds do.</p>
-  <section class="controls" id="controls3" aria-label="Overview chart: countries and sorting">
+    <p class="note ov-lede">Each row shows a country&rsquo;s Age Group Income Ratio in the two periods chosen below. Right of the dotted line (1), <span class="chip old">55&ndash;64</span> year-olds have the higher average income; left of it, <span class="chip young">25&ndash;34</span> year-olds do.</p>
+  <section class="controls" id="controls3" aria-label="Overview chart: periods, countries and sorting">
+    <label>Periods
+      <select id="ovPtype">
+        <option value="wave" selected>3-year waves</option>
+        <option value="year">Single survey years</option>
+      </select>
+    </label>
+    <label>From <select id="ovFrom"></select></label>
+    <label>To <select id="ovTo"></select></label>
     <div class="picker sub" id="ovPicker"></div>
     <label>Sort
       <select id="osort">
@@ -153,7 +161,7 @@
 
   <section class="card" id="drivers" aria-labelledby="decompTitle">
     <div class="card-head">
-      <div><h2 id="decompTitle">What drove the change?</h2><p class="period"><span id="decompPeriod"></span> <button type="button" class="linkbtn goperiods">Change periods</button></p></div>
+      <div><h2 id="decompTitle">What drove the change?</h2><p class="period"><span id="decompPeriod"></span></p></div>
       <div class="btns">
         <button id="toggleTable" type="button" aria-expanded="false" aria-controls="tableWrap">Show data table</button>
         <button id="pngDr" type="button" title="Save this chart as an image">Download PNG</button>
@@ -170,7 +178,15 @@
     <p class="same">Income growth is the change in average income between the two chosen periods, as a percentage of initial income, per year. GRD stands for Growth Rate Differential and is measured in percentage points per year.</p>
     <p class="drivers">Income growth depends on the change in <span class="mchip m1">wages</span> and <span class="mchip m2">employment</span>, plus changes in <span class="mchip m3">transfer income</span> per recipient and the <span class="mchip m4">share</span> of transfer recipients.</p>
     <p class="note sign">A positive GRD means the Age Group Income Ratio is rising, by roughly that many per cent per year: income is shifting towards <span class="chip old">55&ndash;64</span> year-olds. A negative GRD means it is shifting towards <span class="chip young">25&ndash;34</span> year-olds. The black diamond is the total; each coloured bar is one component&rsquo;s contribution.</p>
-  <section class="controls" id="controls2" aria-label="Drivers chart: countries and sorting">
+  <section class="controls" id="controls2" aria-label="Drivers chart: periods, countries and sorting">
+    <label>Periods
+      <select id="drPtype">
+        <option value="wave" selected>3-year waves</option>
+        <option value="year">Single survey years</option>
+      </select>
+    </label>
+    <label>From <select id="drFrom"></select></label>
+    <label>To <select id="drTo"></select></label>
     <div class="picker sub" id="drPicker"></div>
     <label>Sort
       <select id="sort">
@@ -282,6 +298,6 @@
   <div id="noteTip" class="tip" role="tooltip" hidden></div>
   <footer class="foot">Data: Luxembourg Income Study (LIS) Database, (multiple countries; microdata runs completed on 22 October 2026). Luxembourg: LIS. All figures are aggregates computed by the authors. Code: <a href="https://github.com/gabbolus/agir-explorer" target="_blank" rel="noopener">GitHub</a> (MIT licence).</footer>
 </div>
-<script defer src="assets/app.js?v=20261114a"></script>
+<script defer src="assets/app.js?v=20261114b"></script>
 </body>
 </html>

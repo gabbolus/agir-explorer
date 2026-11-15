@@ -183,7 +183,7 @@
   }
 
   // --------------------------------------------------------------- state ----
-  const state = { ptype: "wave", from: 1, to: 7, group: "all", sort: "grd", cmp: [], grp: { "High-income": true, "Middle-income": true }, osort: "to", drAll: false, ovTable: false, table: false, agirTable: false, exact: false,
+  const state = { ptype: "wave", from: 1, to: 7, ov: { ptype: "wave", from: 1, to: 7 }, dr: { ptype: "wave", from: 1, to: 7 }, group: "all", sort: "grd", cmp: [], grp: { "High-income": true, "Middle-income": true }, osort: "to", drAll: false, ovTable: false, table: false, agirTable: false, exact: false,
     ovSel: { c: new Set(), g: { "High-income": true, "Middle-income": true } }, drSel: { c: new Set(), g: { "High-income": true, "Middle-income": true } } };
   countries.forEach(c => { state.ovSel.c.add(c); state.drSel.c.add(c); });
 
@@ -192,14 +192,27 @@
     rows.filter(r => r.pt === ptype).forEach(r => s.add(r.period));
     return [...s].sort((a, b) => a - b).filter(t => ptype === "year" || t <= 7);
   }
-  function fillPeriods() {
-    const ps = periodsAvailable(state.ptype);
-    if (!ps.includes(state.from)) state.from = ps[0];
-    if (!ps.includes(state.to)) state.to = state.ptype === "wave" ? 7 : ps[ps.length - 1];
-    for (const id of ["from", "to"]) {
-      $(id).innerHTML = ps.map(t => `<option value="${t}">${label(state.ptype, t)}</option>`).join("");
-      $(id).value = state[id];
-    }
+  // each chart has its own period choice: type (waves or single years), from and to
+  function fillPer(o, ids) {
+    const ps = periodsAvailable(o.ptype);
+    if (!ps.includes(o.from)) o.from = ps[0];
+    if (!ps.includes(o.to)) o.to = o.ptype === "wave" ? 7 : ps[ps.length - 1];
+    $(ids[0]).value = o.ptype;
+    ids.slice(1).forEach((id, k) => {
+      $(id).innerHTML = ps.map(t => `<option value="${t}">${label(o.ptype, t)}</option>`).join("");
+      $(id).value = k === 0 ? o.from : o.to;
+    });
+  }
+  const PER = [[state, ["ptype", "from", "to"]], [state.ov, ["ovPtype", "ovFrom", "ovTo"]], [state.dr, ["drPtype", "drFrom", "drTo"]]];
+  function fillPeriods() { PER.forEach(([o, ids]) => fillPer(o, ids)); }
+  function wirePer(o, ids, render, msg) {
+    $(ids[0]).addEventListener("change", e => {
+      o.ptype = e.target.value;
+      if (o.ptype === "year") { o.from = 2004; o.to = 2022; } else { o.from = 1; o.to = 7; }
+      fillPer(o, ids); render(); announce(msg());
+    });
+    $(ids[1]).addEventListener("change", e => { o.from = +e.target.value; render(); announce(msg()); });
+    $(ids[2]).addEventListener("change", e => { o.to = +e.target.value; render(); announce(msg()); });
   }
   // ---- line picker: any mix of the two group averages and up to MAXC countries
   const MAXC = 6;
@@ -377,10 +390,11 @@
   let agirTbl = [];
   function renderAgir() {
     const traces = [], summ = [], tbl = [], impAll = {}, ends = [];
+    const inRange = d => d.filter(p => p.t >= state.from && p.t <= state.to);
     const xs = d => d.map(p => (state.ptype === "wave" ? WAVES[p.t] : p.t));
     // each line has its own marker shape; filled = observed, open = includes carried-forward values
     [["High-income", "--series-1", "solid", "circle"], ["Middle-income", "--series-2", "dash", "square"]].filter(x => state.grp[x[0]]).forEach(([g, col, dash, sym]) => {
-      const s = groupSeries(countries.filter(c => groupOf(c) === g && !CAVEAT[c]), state.ptype);
+      const s = inRange(groupSeries(countries.filter(c => groupOf(c) === g && !CAVEAT[c]), state.ptype));
       const c = css(col);
       tbl.push({ name: `${g} average`, pts: s.map(d => ({ t: d.t, v: d.v, ci: 1.96 * d.se, imp: d.imp.length > 0 })) });
       summ.push(`${g} average: ` + s.map(d => `${label(state.ptype, d.t)} ${d.v.toFixed(2)}${d.imp.length ? " (includes carried-forward values)" : ""}`).join(", ") + ".");
@@ -399,7 +413,7 @@
     const cols = SLOT_COL, syms = SLOT_SYM;
     // country lines: observed values only. The line joins the observed surveys; missing
     // periods have no marker or value and are listed as "no data" - never imputed.
-    const grid = periodsAvailable(state.ptype), noData = [];
+    const grid = periodsAvailable(state.ptype).filter(t => t >= state.from && t <= state.to), noData = [];
     state.cmp.forEach(c => {
       const i = slotOf[c];
       const obs = {};
@@ -419,7 +433,7 @@
     });
     const lay = baseLayout();
     lay.xaxis = axis({ type: "category", categoryorder: "array",
-      categoryarray: state.ptype === "wave" ? Object.values(WAVES).slice(0, 7) : periodsAvailable("year") });
+      categoryarray: (state.ptype === "wave" ? periodsAvailable("wave").map(t => WAVES[t]) : periodsAvailable("year")).filter((_, k) => { const t = periodsAvailable(state.ptype)[k]; return t >= state.from && t <= state.to; }) });
     lay.yaxis = axis({ title: { text: "Age Group Income Ratio, 55–64 / 25–34", font: { color: css("--text-secondary") } } });
     lay.shapes = [{ type: "line", xref: "paper", x0: 0, x1: 1, y0: 1, y1: 1, line: { color: css("--text-muted"), width: 1, dash: "dot" } }];
     lay.hovermode = "x unified";
@@ -442,9 +456,10 @@
       lay.margin.r = Math.min(210, 24 + 7.4 * Math.max(...ends.map(e => e.text.length + 2)));
     }
     const chartEl = $("agirChart");
+    if (state.from > state.to) { traces.length = 0; chartEl.dataset.msg = "order"; } else delete chartEl.dataset.msg;
     if (!traces.length) {
       Plotly.purge("agirChart");
-      chartEl.innerHTML = `<p class="note empty-msg">Nothing to show: open &ldquo;Choose lines&rdquo; and tick a group average or a country.</p>`;
+      chartEl.innerHTML = chartEl.dataset.msg === "order" ? `<p class="note empty-msg">Choose a &ldquo;To&rdquo; period that is not before the &ldquo;From&rdquo; period.</p>` : `<p class="note empty-msg">Nothing to show: open &ldquo;Choose lines&rdquo; and tick a group average or a country.</p>`;
     } else {
       if (chartEl.querySelector(".empty-msg")) chartEl.innerHTML = "";
       Plotly.react("agirChart", traces, lay, isNarrow() ? PHONE_CONFIG : AGIR_CONFIG);
@@ -458,7 +473,7 @@
     const readMe = "<strong>How to read the chart.</strong> The dotted line marks equal incomes (ratio of 1). Vertical lines on countries" + (anyGroup() ? " and shaded bands on group averages" : "") + " are 95% confidence intervals." +
       (anyGroup() ? " Filled markers are observed values; hollow markers include carried-forward values." : "") +
       " A country line joins the surveys we observe; a period without a survey has no marker and nothing is imputed." +
-      "<br><strong>From and To</strong> also set the summary cards below the chart and the decomposition further down.";
+      "<br><strong>Periods, From and To</strong> choose the range shown here and in the summary cards below the chart. The two charts further down have their own period choice.";
     const groupNote = anyGroup() ? "<br>" + how : "";
     const cnotes = state.cmp.filter(c => NOTES[c]).map(c => `<br><strong>${c}${NOTE_MARK}</strong> ${noteText(c)}`).join("");
     $("agirNote").innerHTML = `<button type="button" class="imp-btn inline pill" aria-expanded="false" aria-controls="imp-agir"><span class="i" aria-hidden="true">i</span>Notes</button>` +
@@ -515,7 +530,7 @@
   // one row per country: the ratio in the From period (open dot) and the To period (filled dot)
   let ovRows = [], ovAnnounce = "";
   function renderOverview() {
-    const { ptype, from, to } = state, P = t => label(ptype, t), narrow = isNarrow();
+    const { ptype, from, to } = state.ov, P = t => label(ptype, t), narrow = isNarrow();
     $("ovPeriod").textContent = `${P(from)} and ${P(to)}`;
     const ch = $("ovChart");
     if (from >= to) {
@@ -600,10 +615,10 @@
     $("toggleOvTable").textContent = state.ovTable ? "Hide data table" : "Show data table";
     $("toggleOvTable").setAttribute("aria-expanded", String(state.ovTable));
     if (!state.ovTable) return;
-    const P = t => label(state.ptype, t);
+    const P = t => label(state.ov.ptype, t);
     const cellV = (d, want) => `${d.v.toFixed(2)}${d.t !== want ? ` <span class="per-note">(${P(d.t)})</span>` : ""}`;
-    w.innerHTML = `<table><caption class="sr-only">Age Group Income Ratio in ${P(state.from)} and ${P(state.to)}</caption><thead><tr><th scope="col">Country</th><th scope="col">${P(state.from)}</th><th scope="col">${P(state.to)}</th><th scope="col">Change, percentage points</th></tr></thead><tbody>` +
-      ovRows.map(r => `<tr class="${r.isAvg ? "group" : ""}"><th scope="row">${r.isAvg ? r.name : withMark(r.name)}</th><td>${r.single ? "&ndash;" : cellV(r.a, state.from)}</td><td>${cellV(r.z, state.to)}</td><td>${r.single ? "&ndash;" : fmt(100 * (r.z.v - r.a.v), 0)}</td></tr>`).join("") +
+    w.innerHTML = `<table><caption class="sr-only">Age Group Income Ratio in ${P(state.ov.from)} and ${P(state.ov.to)}</caption><thead><tr><th scope="col">Country</th><th scope="col">${P(state.ov.from)}</th><th scope="col">${P(state.ov.to)}</th><th scope="col">Change, percentage points</th></tr></thead><tbody>` +
+      ovRows.map(r => `<tr class="${r.isAvg ? "group" : ""}"><th scope="row">${r.isAvg ? r.name : withMark(r.name)}</th><td>${r.single ? "&ndash;" : cellV(r.a, state.ov.from)}</td><td>${cellV(r.z, state.ov.to)}</td><td>${r.single ? "&ndash;" : fmt(100 * (r.z.v - r.a.v), 0)}</td></tr>`).join("") +
       `</tbody></table><p class="note">A year in brackets: the nearest survey in the range was used.</p>`;
   }
 
@@ -627,13 +642,18 @@
   }
   function syncUrl() {
     if (!urlReady) return;
-    const p = [], dFrom = state.ptype === "wave" ? 1 : 2004, dTo = state.ptype === "wave" ? 7 : 2022;
+    const p = [];
     if (state.cmp.length) p.push("lines=" + state.cmp.map(encodeURIComponent).join(","));
     const g = GROUPS.filter(([x]) => state.grp[x]).map(([x]) => x === "High-income" ? "high" : "middle");
     if (g.length < 2) p.push("averages=" + (g.length ? g[0] : "none"));
-    if (state.ptype === "year") p.push("periods=years");
-    if (state.from !== dFrom) p.push("from=" + startYear(state.ptype, state.from));
-    if (state.to !== dTo) p.push("to=" + startYear(state.ptype, state.to));
+    const nper = p.length;
+    [[state, "periods", "from", "to"], [state.ov, "ovp", "ovfrom", "ovto"], [state.dr, "drp", "drfrom", "drto"]].forEach(([o, pk, fk, tk]) => {
+      const dFrom = o.ptype === "wave" ? 1 : 2004, dTo = o.ptype === "wave" ? 7 : 2022;
+      if (o.ptype === "year") p.push(pk + "=years");
+      if (o.from !== dFrom) p.push(fk + "=" + startYear(o.ptype, o.from));
+      if (o.to !== dTo) p.push(tk + "=" + startYear(o.ptype, o.to));
+    });
+    if (p.length > nper) p.push("pv=2");   // marks links that carry a separate period choice per chart
     if (state.osort !== "to") p.push("rank=" + state.osort);
     [["ov", state.ovSel], ["dr", state.drSel]].forEach(([k, sl]) => {
       const cs = selParam(sl.c); if (cs) p.push(`${k}=${cs}`);
@@ -646,9 +666,16 @@
   }
   function readUrl() {
     const q = new URLSearchParams(location.search);
-    if (q.get("periods") === "years") { state.ptype = "year"; state.from = 2004; state.to = 2022; $("ptype").value = "year"; }
-    const ps = periodsAvailable(state.ptype);
-    ["from", "to"].forEach(k => { const y = parseInt(q.get(k), 10); if (y && ps.includes(fromYear(state.ptype, y))) state[k] = fromYear(state.ptype, y); });
+    // older links (no pv=2) set one period choice for all charts; newer links set each chart's own
+    const legacy = !q.has("pv");
+    const readPer = (o, pk, fk, tk) => {
+      const pick = (k, lk) => (q.has(k) ? q.get(k) : legacy ? q.get(lk) : null);
+      const yrs = pick(pk, "periods") === "years";
+      o.ptype = yrs ? "year" : "wave"; o.from = yrs ? 2004 : 1; o.to = yrs ? 2022 : 7;
+      const ps = periodsAvailable(o.ptype);
+      [["from", pick(fk, "from")], ["to", pick(tk, "to")]].forEach(([k, v]) => { const y = parseInt(v, 10); if (y && ps.includes(fromYear(o.ptype, y))) o[k] = fromYear(o.ptype, y); });
+    };
+    readPer(state, "periods", "from", "to"); readPer(state.ov, "ovp", "ovfrom", "ovto"); readPer(state.dr, "drp", "drfrom", "drto");
     (q.get("lines") || "").split(",").map(s => s.trim()).filter(c => countries.includes(c)).forEach(c => setCountry(c, true));
     const av = q.get("averages");
     if (av) { state.grp["High-income"] = av === "high"; state.grp["Middle-income"] = av === "middle"; }
@@ -667,7 +694,7 @@
     $("toggleAgirTable").textContent = state.agirTable ? "Hide data table" : "Show data table";
     $("toggleAgirTable").setAttribute("aria-expanded", String(state.agirTable));
     if (!state.agirTable) return;
-    const ps = periodsAvailable(state.ptype);
+    const ps = periodsAvailable(state.ptype).filter(t => t >= state.from && t <= state.to);
     w.innerHTML = `<table><caption class="sr-only">Age Group Income Ratio by period, with 95% confidence interval</caption><thead><tr><th scope="col">Period</th>${agirTbl.map(s => `<th scope="col">${s.name}</th>`).join("")}</tr></thead><tbody>` +
       ps.map(t => `<tr><th scope="row">${label(state.ptype, t)}</th>${agirTbl.map(s => { const d = s.pts.find(x => x.t === t); return `<td>${d ? `${d.v.toFixed(2)} ±${d.ci.toFixed(2)}${d.imp ? " *" : ""}` : "no data"}</td>`; }).join("")}</tr>`).join("") +
       `</tbody></table><p class="note">Ratio ± 95% confidence interval. * includes carried-forward values (a country with no survey in that period keeps its latest value).</p>`;
@@ -677,7 +704,7 @@
   let current = [];
   let decompAnnounce = "";
   function renderDecomp() {
-    const { ptype, from, to } = state;
+    const { ptype, from, to } = state.dr;
     $("decompPeriod").textContent = `${label(ptype, from)} to ${label(ptype, to)}`;
     const dsel = state.drSel, list = countries.filter(c => dsel.c.has(c));
     const res = [], missing = [];
@@ -795,7 +822,7 @@
     if (!state.table) return;
     const cols = [["growth", "Total GRD"], ...MARGINS.map(m => [m.key, m.label])];
     wrap.innerHTML = `<table><caption class="sr-only">Decomposition of the growth rate differential, percentage points per year</caption><thead><tr><th scope="col">Country</th><th scope="col" class="per">Periods</th>${cols.map(c => `<th scope="col">${c[1]}</th>`).join("")}</tr></thead><tbody>` +
-      current.map(r => `<tr class="${r.isAvg ? "group" : ""}"><td>${r.country}${r.moved ? `<span class="per-sub">${label(state.ptype, r.from)} to ${label(state.ptype, r.to)}</span>` : ""}</td><td class="per${r.moved ? " short" : ""}">${r.isAvg ? "" : label(state.ptype, r.from) + " to " + label(state.ptype, r.to)}</td>${cols.map(c => `<td>${fmt(r[c[0]])}</td>`).join("")}</tr>`).join("") +
+      current.map(r => `<tr class="${r.isAvg ? "group" : ""}"><td>${r.country}${r.moved ? `<span class="per-sub">${label(state.dr.ptype, r.from)} to ${label(state.dr.ptype, r.to)}</span>` : ""}</td><td class="per${r.moved ? " short" : ""}">${r.isAvg ? "" : label(state.dr.ptype, r.from) + " to " + label(state.dr.ptype, r.to)}</td>${cols.map(c => `<td>${fmt(r[c[0]])}</td>`).join("")}</tr>`).join("") +
       `</tbody></table><p class="note">Percentage points per year.</p>`;
   }
 
@@ -821,9 +848,9 @@
   function download() {
     const cols = ["growth", ...MARGINS.map(m => m.key)];
     const csv = ["country,group,from,to," + cols.map(c => c === "growth" ? "grd" : c).join(",")]
-      .concat(current.map(r => [`"${r.country}"`, r.group, r.isAvg ? label(state.ptype, state.from) : label(state.ptype, r.from), r.isAvg ? label(state.ptype, state.to) : label(state.ptype, r.to),
+      .concat(current.map(r => [`"${r.country}"`, r.group, r.isAvg ? label(state.dr.ptype, state.dr.from) : label(state.dr.ptype, r.from), r.isAvg ? label(state.dr.ptype, state.dr.to) : label(state.dr.ptype, r.to),
         ...cols.map(c => r[c].toFixed(4))].join(","))).join("\n");
-    saveCsv(csv, `agir_decomposition_${label(state.ptype, state.from)}_to_${label(state.ptype, state.to)}.csv`.replace(/\u2013/g, "-"));
+    saveCsv(csv, `agir_decomposition_${label(state.dr.ptype, state.dr.from)}_to_${label(state.dr.ptype, state.dr.to)}.csv`.replace(/\u2013/g, "-"));
   }
 
   // ------------------------------------------------- notes on country names ----
@@ -842,7 +869,7 @@
   function showTip(r, x, y) {
     const c = r.country;
     tip.innerHTML = `<strong>${withMark(c)}</strong>` +
-      (r.moved ? ` Shorter period: ${label(state.ptype, r.from)} to ${label(state.ptype, r.to)}, the nearest surveys available.` : "") +
+      (r.moved ? ` Shorter period: ${label(state.dr.ptype, r.from)} to ${label(state.dr.ptype, r.to)}, the nearest surveys available.` : "") +
       (NOTES[c] ? ` ${noteText(c)}` : "");
     tip.hidden = false;
     const w = tip.offsetWidth, h = tip.offsetHeight;
@@ -883,13 +910,9 @@
     renderAgir(); renderOverview(); renderDecomp(); renderKeyFind();
     ["agirChart", "ovChart", "decompChart"].forEach(i => $(i).classList.remove("loading"));
   }
-  $("ptype").addEventListener("change", e => {
-    state.ptype = e.target.value;
-    if (state.ptype === "year") { state.from = 2004; state.to = 2022; } else { state.from = 1; state.to = 7; }
-    fillPeriods(); renderAll(); announce(decompAnnounce);
-  });
-  $("from").addEventListener("change", e => { state.from = +e.target.value; renderReadLine(); renderOverview(); renderDecomp(); announce(decompAnnounce); });
-  $("to").addEventListener("change", e => { state.to = +e.target.value; renderReadLine(); renderOverview(); renderDecomp(); announce(decompAnnounce); });
+  wirePer(state, ["ptype", "from", "to"], renderAgir, () => $("agirSummary").textContent.slice(0, 200));
+  wirePer(state.ov, ["ovPtype", "ovFrom", "ovTo"], renderOverview, () => ovAnnounce);
+  wirePer(state.dr, ["drPtype", "drFrom", "drTo"], renderDecomp, () => decompAnnounce);
   $("sort").addEventListener("change", e => { state.sort = e.target.value; renderDecomp(); announce(decompAnnounce); });
   $("osort").addEventListener("change", e => { state.osort = e.target.value; renderOverview(); announce(ovAnnounce); });
   $("toggleOvTable").addEventListener("click", () => { state.ovTable = !state.ovTable; renderOvTable(); });
@@ -960,11 +983,6 @@
   $("pngOv").addEventListener("click", () => { if ($("ovChart").data) exportPng($("ovChart"), "agir_all_countries", false); });
   $("pngDr").addEventListener("click", () => { if ($("decompChart").data) exportPng($("decompChart"), "agir_drivers", true); });
   $("drMore").addEventListener("click", e => { if (e.target.closest("#drMoreBtn")) { state.drAll = !state.drAll; renderDecomp(); const b = $("drMoreBtn"); if (b) b.focus(); } });
-  // "Change periods" jumps to the period filters
-  document.querySelectorAll(".goperiods").forEach(b => b.addEventListener("click", () => {
-    const c = $("controls"); c.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "center" });
-    $("from").focus({ preventScroll: true });
-  }));
   // jump navigation: mark the section in view
   if ("IntersectionObserver" in window) {
     const links = [...document.querySelectorAll(".jump a")], map = new Map(links.map(a => [a.getAttribute("href").slice(1), a]));

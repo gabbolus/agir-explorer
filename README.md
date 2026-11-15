@@ -6,6 +6,7 @@ The **Age Group Income Ratio** is the average disposable income of people aged 5
 
 - follow the Age Group Income Ratio over time for high-income and middle-income countries, and for up to six individual countries, with a plain-language reading of each line;
 - compare all countries, or just the ones you pick, in two chosen periods;
+- choose the period separately for each chart (3-year waves or single survey years, from and to);
 - choose any two periods (3-year waves or single survey years) and split the change in the age-income gap into **wages, employment, transfer income, transfer share and other income**;
 - see the numbers as data tables, download them as CSV (and the lower charts as PNG images), and copy a link that opens the dashboard with the same choices.
 
@@ -51,7 +52,7 @@ Luxembourg Income Study (LIS) Database, (multiple countries; microdata runs comp
 
 ## Links to a view
 
-The address records the current choices, so a copied link opens the same view. For example, `?lines=Italy,Spain&from=2007&to=2022` shows Italy and Spain, from 2007–09 to 2022–24. Parameters: `lines` (countries, comma-separated), `averages` (`high`, `middle` or `none`), `periods=years`, `from` and `to` (first year of the wave, or the survey year), `rank` (`change` or `name`, for the all-countries chart) and `sort` (`name`, `wages`, `employment`, `transfer-income`, `transfer-share`, for the drivers chart). The all-countries chart and the drivers chart each have their own country choice: `ov` and `dr` take a comma-separated list of countries, `high`, `middle` or `none` (omitted when all countries are shown), and `ova` and `dra` take `high`, `middle` or `none` for the group averages (omitted when both are shown).
+The address records the current choices, so a copied link opens the same view. For example, `?lines=Italy,Spain&from=2007&to=2022` shows Italy and Spain, from 2007–09 to 2022–24. Parameters: `lines` (countries, comma-separated), `averages` (`high`, `middle` or `none`), `periods=years`, `from` and `to` (first year of the wave, or the survey year; these set the range of the first chart and its summary cards). The all-countries chart has its own `ovp=years`, `ovfrom` and `ovto`, and the drivers chart `drp=years`, `drfrom` and `drto`; links that carry separate period choices contain `pv=2` (older links without it apply `periods`, `from` and `to` to all three charts), `rank` (`change` or `name`, for the all-countries chart) and `sort` (`name`, `wages`, `employment`, `transfer-income`, `transfer-share`, for the drivers chart). The all-countries chart and the drivers chart each have their own country choice: `ov` and `dr` take a comma-separated list of countries, `high`, `middle` or `none` (omitted when all countries are shown), and `ova` and `dra` take `high`, `middle` or `none` for the group averages (omitted when both are shown).
 
 ## Files
 
